@@ -11,6 +11,8 @@ interface BarcodeScannerProps {
 
 export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const onScanRef = useRef(onScan);
+  onScanRef.current = onScan;
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
           if (decodedText !== lastScanRef.current) {
             lastScanRef.current = decodedText;
             if (navigator.vibrate) navigator.vibrate(100);
-            onScan(decodedText);
+            onScanRef.current(decodedText);
           }
         },
         () => {}
@@ -73,7 +75,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     return () => {
       scanner.stop().catch(() => {});
     };
-  }, [active, selectedCameraId, onScan]);
+  }, [active, selectedCameraId]);
 
   const handleCameraChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useCategories } from '@/lib/hooks/useCategories';
+import { useProductGroups } from '@/lib/hooks/useProductGroups';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { useToast } from '@/components/ui/Toast';
 import { UNITS } from '@/lib/constants';
@@ -17,11 +18,13 @@ interface ProductFormProps {
 export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
   const router = useRouter();
   const { categories } = useCategories();
+  const { groups } = useProductGroups();
   const { createProduct } = useProducts();
   const { toast } = useToast();
 
   const [name, setName] = useState(initialName || '');
   const [categoryId, setCategoryId] = useState('');
+  const [groupId, setGroupId] = useState('');
   const [unit, setUnit] = useState('pcs');
   const [barcode, setBarcode] = useState(initialBarcode || '');
   const [minStock, setMinStock] = useState('1');
@@ -38,6 +41,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
       await createProduct({
         name: name.trim(),
         category_id: categoryId || null,
+        group_id: groupId || null,
         unit,
         barcode: barcode.trim() || null,
         min_stock: Number(minStock) || 1,
@@ -76,6 +80,22 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>
               {cat.icon} {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="w-full">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Product Group</label>
+        <select
+          value={groupId}
+          onChange={(e) => setGroupId(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">No group</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              🔗 {g.name}
             </option>
           ))}
         </select>

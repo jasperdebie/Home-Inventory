@@ -34,8 +34,8 @@ export function ShoppingList({ groups, onBought }: ShoppingListProps) {
             {group.items.map((item) => (
               <ShoppingItem
                 key={item.id}
-                product={item}
-                onBought={(qty) => onBought(item.id, qty)}
+                item={item}
+                onBought={onBought}
               />
             ))}
           </div>

@@ -12,7 +12,7 @@ export function useProducts() {
   const fetchProducts = useCallback(async () => {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories(*)')
+      .select('*, category:categories(*), product_group:product_groups(*)')
       .eq('is_archived', false)
       .order('name');
 
@@ -72,6 +72,7 @@ export function useProducts() {
     async (product: {
       name: string;
       category_id?: string | null;
+      group_id?: string | null;
       unit: string;
       barcode?: string | null;
       min_stock: number;
@@ -103,7 +104,7 @@ export function useProducts() {
   );
 
   const updateProduct = useCallback(
-    async (id: string, updates: Partial<{ name: string; category_id: string | null; unit: string; barcode: string | null; min_stock: number; notes: string | null; is_archived: boolean }>) => {
+    async (id: string, updates: Partial<{ name: string; category_id: string | null; group_id: string | null; unit: string; barcode: string | null; min_stock: number; notes: string | null; is_archived: boolean }>) => {
       const { error } = await supabase.from('products').update(updates).eq('id', id);
       if (error) throw error;
       await fetchProducts();

@@ -27,6 +27,11 @@ export function ProductCard({ product, onStockChange }: ProductCardProps) {
                 {product.category.icon} {product.category.name}
               </span>
             )}
+            {product.product_group && (
+              <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                🔗 {product.product_group.name}
+              </span>
+            )}
           </div>
         </Link>
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${badgeColor}`}>

@@ -5,10 +5,18 @@ export type Category = {
   sort_order: number;
 };
 
+export type ProductGroup = {
+  id: string;
+  name: string;
+  min_stock: number;
+  created_at: string;
+};
+
 export type Product = {
   id: string;
   name: string;
   category_id: string | null;
+  group_id: string | null;
   unit: string;
   barcode: string | null;
   min_stock: number;
@@ -19,6 +27,7 @@ export type Product = {
   created_at: string;
   updated_at: string;
   category?: Category;
+  product_group?: ProductGroup;
 };
 
 export type StockChange = {
@@ -32,4 +41,5 @@ export type StockChange = {
 
 export type ProductWithCategory = Product & {
   category: Category | null;
+  product_group: ProductGroup | null;
 };

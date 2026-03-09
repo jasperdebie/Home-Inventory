@@ -7,6 +7,7 @@ import { APP_NAME } from '@/lib/constants';
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: '🏠' },
   { href: '/products', label: 'Products', icon: '📦' },
+  { href: '/groups', label: 'Groups', icon: '🔗' },
   { href: '/shopping-list', label: 'Shopping List', icon: '🛒' },
   { href: '/scanner', label: 'Scanner', icon: '📷' },
 ];

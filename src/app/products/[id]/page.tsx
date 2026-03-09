@@ -2,9 +2,11 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { ProductWithCategory, StockChange } from '@/lib/supabase/types';
 import { useProducts } from '@/lib/hooks/useProducts';
+import { useProductGroups } from '@/lib/hooks/useProductGroups';
 import { useStockChanges } from '@/lib/hooks/useStockChanges';
 import { useToast } from '@/components/ui/Toast';
 import { StockAdjuster } from '@/components/products/StockAdjuster';
@@ -20,7 +22,8 @@ import { formatDate, formatStockChange } from '@/lib/utils/format';
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { addStockChange, deleteProduct } = useProducts();
+  const { addStockChange, deleteProduct, updateProduct } = useProducts();
+  const { groups } = useProductGroups();
   const { changes, loading: changesLoading } = useStockChanges(id);
   const { toast } = useToast();
 
@@ -34,7 +37,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     async function fetch() {
       const { data, error } = await supabase
         .from('products')
-        .select('*, category:categories(*)')
+        .select('*, category:categories(*), product_group:product_groups(*)')
         .eq('id', id)
         .single();
 
@@ -104,6 +107,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 {product.category.icon} {product.category.name}
               </span>
             )}
+            {product.product_group && (
+              <Link href={`/groups/${product.product_group.id}`} className="text-sm text-blue-600 hover:underline block">
+                🔗 {product.product_group.name}
+              </Link>
+            )}
           </div>
           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStockBadgeColor(status)}`}>
             {status === 'out' ? 'Out of Stock' : status === 'low' ? 'Low Stock' : 'In Stock'}
@@ -136,6 +144,32 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <span className="ml-1">{product.notes}</span>
             </div>
           )}
+          <div className="col-span-2">
+            <span className="text-gray-500">Group:</span>
+            <select
+              value={product.group_id || ''}
+              onChange={async (e) => {
+                const newGroupId = e.target.value || null;
+                try {
+                  await updateProduct(product.id, { group_id: newGroupId });
+                  setProduct(prev => {
+                    if (!prev) return prev;
+                    const pg = newGroupId ? (groups.find(g => g.id === newGroupId) ?? null) : null;
+                    return { ...prev, group_id: newGroupId, product_group: pg } as ProductWithCategory;
+                  });
+                  toast(newGroupId ? 'Added to group' : 'Removed from group');
+                } catch {
+                  toast('Failed to update group', 'error');
+                }
+              }}
+              className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">No group</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>🔗 {g.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </Card>
 

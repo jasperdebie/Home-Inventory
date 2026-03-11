@@ -5,7 +5,6 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { FloatingActionButton } from './FloatingActionButton';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,7 +24,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </main>
           <BottomNav />
-          <FloatingActionButton />
         </div>
       </div>
     </ToastProvider>

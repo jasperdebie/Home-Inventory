@@ -16,7 +16,7 @@ import { getStockBadgeColor } from '@/lib/utils/stock';
 
 export default function GroupsPage() {
   const { groups, loading, createGroup } = useProductGroups();
-  const { products } = useProducts();
+  const { products, loading: productsLoading } = useProducts();
   const { toast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
@@ -39,7 +39,7 @@ export default function GroupsPage() {
     setSaving(false);
   };
 
-  if (loading) {
+  if (loading || productsLoading) {
     return (
       <div className="flex justify-center py-12">
         <Spinner size="lg" />
@@ -64,8 +64,8 @@ export default function GroupsPage() {
         <div className="space-y-2">
           {groups.map((group) => {
             const members = products.filter(p => p.group_id === group.id);
-            const totalStock = members.reduce((sum, p) => sum + p.current_stock, 0);
-            const status = getStockStatus(totalStock, group.min_stock);
+            const totalStock = members.reduce((sum, p) => sum + Number(p.current_stock), 0);
+            const status = getStockStatus(totalStock, Number(group.min_stock));
 
             return (
               <Link key={group.id} href={`/groups/${group.id}`}>

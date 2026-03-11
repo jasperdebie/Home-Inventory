@@ -18,6 +18,7 @@ export function useProducts() {
 
     if (error) {
       console.error('Error fetching products:', error);
+      setLoading(false);
       return;
     }
     setProducts(data || []);
@@ -48,7 +49,7 @@ export function useProducts() {
       // Optimistic update
       setProducts((prev) =>
         prev.map((p) =>
-          p.id === productId ? { ...p, current_stock: p.current_stock + quantity } : p
+          p.id === productId ? { ...p, current_stock: Number(p.current_stock) + quantity } : p
         )
       );
 

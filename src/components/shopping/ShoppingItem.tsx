@@ -24,8 +24,10 @@ export function ShoppingItem({ item, onBought }: ShoppingItemProps) {
       </div>
       <Button
         size="sm"
-        onClick={() => onBought(item.targetProductId, item.needed)}
+        onClick={() => item.targetProductId && onBought(item.targetProductId, item.needed)}
+        disabled={!item.targetProductId}
         className="ml-3 flex-shrink-0"
+        title={!item.targetProductId ? 'Add a product to this group first' : undefined}
       >
         +{item.needed} Bought
       </Button>

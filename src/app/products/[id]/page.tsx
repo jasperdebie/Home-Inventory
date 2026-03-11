@@ -22,7 +22,7 @@ import { formatDate, formatStockChange } from '@/lib/utils/format';
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { addStockChange, deleteProduct, updateProduct } = useProducts();
+  const { products, addStockChange, deleteProduct, updateProduct } = useProducts();
   const { groups } = useProductGroups();
   const { changes, loading: changesLoading } = useStockChanges(id);
   const { toast } = useToast();
@@ -30,6 +30,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [product, setProduct] = useState<ProductWithCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
+  const [editBarcode, setEditBarcode] = useState('');
+  const [barcodeError, setBarcodeError] = useState('');
 
   useEffect(() => {
     const supabase = createClient();
@@ -65,6 +67,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     };
   }, [id, router]);
 
+  // Sync editBarcode when navigating to a different product (but not on stock updates)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (product) setEditBarcode(product.barcode ?? ''); }, [product?.id]);
+
   if (loading || !product) {
     return (
       <div className="flex justify-center py-12">
@@ -93,6 +99,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       router.push('/products');
     } catch {
       toast('Failed to delete', 'error');
+    }
+  };
+
+  const handleBarcodeBlur = async () => {
+    if (barcodeError) return;
+    const trimmed = editBarcode.trim() || null;
+    if (trimmed === (product.barcode ?? null)) return;
+    try {
+      await updateProduct(product.id, { barcode: trimmed });
+      setProduct(prev => prev ? { ...prev, barcode: trimmed } : prev);
+      toast(trimmed ? 'Barcode updated' : 'Barcode removed');
+    } catch {
+      toast('Failed to update barcode', 'error');
+      setEditBarcode(product.barcode ?? '');
     }
   };
 
@@ -132,12 +152,28 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <span className="text-gray-500">Min Stock:</span>
             <span className="ml-1 font-medium">{product.min_stock} {product.unit}</span>
           </div>
-          {product.barcode && (
-            <div>
-              <span className="text-gray-500">Barcode:</span>
-              <span className="ml-1 font-medium">{product.barcode}</span>
-            </div>
-          )}
+          <div className="col-span-2">
+            <p className="text-gray-500 mb-1">Barcode</p>
+            <input
+              type="text"
+              value={editBarcode}
+              onChange={(e) => {
+                const v = e.target.value;
+                setEditBarcode(v);
+                if (v.trim() && products.some(p => p.id !== product.id && p.barcode === v.trim())) {
+                  setBarcodeError('Already in use by another product.');
+                } else {
+                  setBarcodeError('');
+                }
+              }}
+              onBlur={handleBarcodeBlur}
+              placeholder="Scan or type barcode"
+              className={`w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                barcodeError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              }`}
+            />
+            {barcodeError && <p className="mt-0.5 text-xs text-red-600">{barcodeError}</p>}
+          </div>
           {product.notes && (
             <div className="col-span-2">
               <span className="text-gray-500">Notes:</span>

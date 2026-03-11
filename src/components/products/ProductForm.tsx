@@ -19,7 +19,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
   const router = useRouter();
   const { categories } = useCategories();
   const { groups } = useProductGroups();
-  const { createProduct } = useProducts();
+  const { products, createProduct } = useProducts();
   const { toast } = useToast();
 
   const [name, setName] = useState(initialName || '');
@@ -27,14 +27,31 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
   const [groupId, setGroupId] = useState('');
   const [unit, setUnit] = useState('pcs');
   const [barcode, setBarcode] = useState(initialBarcode || '');
+  const [barcodeError, setBarcodeError] = useState('');
   const [minStock, setMinStock] = useState('1');
   const [initialStock, setInitialStock] = useState('0');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setBarcode(value);
+    if (value.trim() && products.some(p => p.barcode === value.trim())) {
+      setBarcodeError('This barcode is already in use by another product.');
+    } else {
+      setBarcodeError('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    const trimmedBarcode = barcode.trim() || null;
+    if (trimmedBarcode && products.some(p => p.barcode === trimmedBarcode)) {
+      setBarcodeError('This barcode is already in use by another product.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -43,7 +60,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
         category_id: categoryId || null,
         group_id: groupId || null,
         unit,
-        barcode: barcode.trim() || null,
+        barcode: trimmedBarcode,
         min_stock: Number(minStock) || 1,
         notes: notes.trim() || null,
         initial_stock: Number(initialStock) || 0,
@@ -117,8 +134,9 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
         <Input
           label="Barcode"
           value={barcode}
-          onChange={(e) => setBarcode(e.target.value)}
+          onChange={handleBarcodeChange}
           placeholder="Scan or type"
+          error={barcodeError}
         />
       </div>
 

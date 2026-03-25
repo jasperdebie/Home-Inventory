@@ -28,8 +28,8 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
   const [unit, setUnit] = useState('pcs');
   const [barcode, setBarcode] = useState(initialBarcode || '');
   const [barcodeError, setBarcodeError] = useState('');
-  const [minStock, setMinStock] = useState('1');
-  const [initialStock, setInitialStock] = useState('0');
+  const [minStock, setMinStock] = useState(initialBarcode ? '0' : '1');
+  const [initialStock, setInitialStock] = useState(initialBarcode ? '1' : '0');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -61,7 +61,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
         group_id: groupId || null,
         unit,
         barcode: trimmedBarcode,
-        min_stock: Number(minStock) || 1,
+        min_stock: Number(minStock) >= 0 ? Number(minStock) : 0,
         notes: notes.trim() || null,
         initial_stock: Number(initialStock) || 0,
       });

@@ -32,6 +32,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [showDelete, setShowDelete] = useState(false);
   const [editBarcode, setEditBarcode] = useState('');
   const [barcodeError, setBarcodeError] = useState('');
+  const [editMinStock, setEditMinStock] = useState('1');
+  const [editName, setEditName] = useState('');
 
   useEffect(() => {
     const supabase = createClient();
@@ -69,7 +71,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   // Sync editBarcode when navigating to a different product (but not on stock updates)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (product) setEditBarcode(product.barcode ?? ''); }, [product?.id]);
+  useEffect(() => {
+    if (product) {
+      setEditBarcode(product.barcode ?? '');
+      setEditMinStock(String(product.min_stock));
+      setEditName(product.name);
+    }
+  }, [product?.id]);
 
   if (loading || !product) {
     return (
@@ -102,6 +110,40 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const handleNameBlur = async () => {
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      setEditName(product.name);
+      return;
+    }
+    if (trimmed === product.name) return;
+    try {
+      await updateProduct(product.id, { name: trimmed });
+      setProduct(prev => prev ? { ...prev, name: trimmed } : prev);
+      toast('Name updated');
+    } catch {
+      toast('Failed to update name', 'error');
+      setEditName(product.name);
+    }
+  };
+
+  const handleMinStockBlur = async () => {
+    const val = Number(editMinStock);
+    if (isNaN(val) || val < 0) {
+      setEditMinStock(String(product.min_stock));
+      return;
+    }
+    if (val === product.min_stock) return;
+    try {
+      await updateProduct(product.id, { min_stock: val });
+      setProduct(prev => prev ? { ...prev, min_stock: val } : prev);
+      toast('Min stock updated');
+    } catch {
+      toast('Failed to update min stock', 'error');
+      setEditMinStock(String(product.min_stock));
+    }
+  };
+
   const handleBarcodeBlur = async () => {
     if (barcodeError) return;
     const trimmed = editBarcode.trim() || null;
@@ -121,7 +163,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <Card>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{product.name}</h2>
+            <input
+              type="text"
+              aria-label="Product name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={handleNameBlur}
+              className="text-xl font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full"
+            />
             {product.category && (
               <span className="text-sm text-gray-500">
                 {product.category.icon} {product.category.name}
@@ -148,9 +197,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm mt-4 pt-4 border-t">
-          <div>
-            <span className="text-gray-500">Min Stock:</span>
-            <span className="ml-1 font-medium">{product.min_stock} {product.unit}</span>
+          <div className="col-span-2">
+            <p className="text-gray-500 mb-1">Min Stock ({product.unit})</p>
+            <input
+              type="number"
+              min="0"
+              aria-label="Minimum stock"
+              value={editMinStock}
+              onChange={(e) => setEditMinStock(e.target.value)}
+              onBlur={handleMinStockBlur}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
           <div className="col-span-2">
             <p className="text-gray-500 mb-1">Barcode</p>

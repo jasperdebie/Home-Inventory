@@ -9,6 +9,7 @@ import { useProductGroups } from '@/lib/hooks/useProductGroups';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { useToast } from '@/components/ui/Toast';
 import { UNITS } from '@/lib/constants';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 interface ProductFormProps {
   initialBarcode?: string;
@@ -104,18 +105,13 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
 
       <div className="w-full">
         <label className="block text-sm font-medium text-gray-700 mb-1">Product Group</label>
-        <select
+        <SearchableSelect
           value={groupId}
-          onChange={(e) => setGroupId(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">No group</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              🔗 {g.name}
-            </option>
-          ))}
-        </select>
+          onChange={setGroupId}
+          options={groups.map(g => ({ value: g.id, label: `🔗 ${g.name}` }))}
+          placeholder="Search groups..."
+          emptyLabel="No group"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">

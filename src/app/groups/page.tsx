@@ -22,6 +22,7 @@ export default function GroupsPage() {
   const [newName, setNewName] = useState('');
   const [newMinStock, setNewMinStock] = useState('1');
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +55,14 @@ export default function GroupsPage() {
         <Button size="sm" onClick={() => setShowCreate(true)}>+ New Group</Button>
       </div>
 
+      {groups.length > 0 && (
+        <Input
+          placeholder="Search groups..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      )}
+
       {groups.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-4xl mb-3">🔗</p>
@@ -62,7 +71,7 @@ export default function GroupsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {groups.map((group) => {
+          {groups.filter(g => g.name.toLowerCase().includes(search.toLowerCase())).map((group) => {
             const members = products.filter(p => p.group_id === group.id);
             const totalStock = members.reduce((sum, p) => sum + Number(p.current_stock), 0);
             const status = getStockStatus(totalStock, Number(group.min_stock));

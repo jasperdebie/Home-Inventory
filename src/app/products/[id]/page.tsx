@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { ProductWithCategory, StockChange } from '@/lib/supabase/types';
+import { ProductWithCategory } from '@/lib/supabase/types';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { useProductGroups } from '@/lib/hooks/useProductGroups';
 import { useStockChanges } from '@/lib/hooks/useStockChanges';
@@ -18,6 +18,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { getStockStatus } from '@/lib/constants';
 import { getStockBadgeColor } from '@/lib/utils/stock';
 import { formatDate, formatStockChange } from '@/lib/utils/format';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -238,11 +239,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
           <div className="col-span-2">
-            <span className="text-gray-500">Group:</span>
-            <select
+            <p className="text-gray-500 mb-1">Group</p>
+            <SearchableSelect
               value={product.group_id || ''}
-              onChange={async (e) => {
-                const newGroupId = e.target.value || null;
+              options={groups.map(g => ({ value: g.id, label: `🔗 ${g.name}` }))}
+              onChange={async (newValue) => {
+                const newGroupId = newValue || null;
                 try {
                   await updateProduct(product.id, { group_id: newGroupId });
                   setProduct(prev => {
@@ -255,13 +257,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   toast('Failed to update group', 'error');
                 }
               }}
-              className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">No group</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>🔗 {g.name}</option>
-              ))}
-            </select>
+              placeholder="Search groups..."
+              emptyLabel="No group"
+            />
           </div>
         </div>
       </Card>

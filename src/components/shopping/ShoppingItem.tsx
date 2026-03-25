@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ShoppingItem as ShoppingItemType } from '@/lib/hooks/useShoppingList';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
+import { StockAdjuster } from '@/components/products/StockAdjuster';
 
 interface ShoppingItemProps {
   item: ShoppingItemType;
@@ -11,14 +12,22 @@ interface ShoppingItemProps {
 }
 
 export function ShoppingItem({ item, onBought }: ShoppingItemProps) {
+  const [showQuantity, setShowQuantity] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [quantity, setQuantity] = useState(item.needed);
 
   const handleBought = () => {
     if (!item.targetProductId) return;
+    setQuantity(item.needed);
+    setShowQuantity(true);
+  };
+
+  const handleConfirmQuantity = () => {
+    setShowQuantity(false);
     if (item.isGroup && item.groupMembers && item.groupMembers.length > 1) {
       setShowPicker(true);
-    } else {
-      onBought(item.targetProductId, item.needed);
+    } else if (item.targetProductId) {
+      onBought(item.targetProductId, quantity);
     }
   };
 
@@ -47,6 +56,26 @@ export function ShoppingItem({ item, onBought }: ShoppingItemProps) {
         </Button>
       </div>
 
+      {/* Quantity dialog */}
+      <Dialog open={showQuantity} onClose={() => setShowQuantity(false)} title={`How many ${item.name}?`}>
+        <p className="text-sm text-gray-500 mb-4">Need {item.needed}, but how many did you actually buy?</p>
+        <div className="flex justify-center py-4">
+          <StockAdjuster
+            currentStock={quantity}
+            onAdjust={(delta) => setQuantity(Math.max(1, quantity + delta))}
+            size="lg"
+            unit={item.unit}
+          />
+        </div>
+        <Button onClick={handleConfirmQuantity} className="w-full mt-2">
+          Confirm +{quantity}
+        </Button>
+        <Button variant="ghost" onClick={() => setShowQuantity(false)} className="w-full mt-1">
+          Cancel
+        </Button>
+      </Dialog>
+
+      {/* Group product picker dialog */}
       {item.isGroup && item.groupMembers && (
         <Dialog open={showPicker} onClose={() => setShowPicker(false)} title={`Which ${item.name}?`}>
           <p className="text-sm text-gray-500 mb-3">Which product did you buy?</p>
@@ -56,7 +85,7 @@ export function ShoppingItem({ item, onBought }: ShoppingItemProps) {
                 key={member.id}
                 type="button"
                 onClick={() => {
-                  onBought(member.id, item.needed);
+                  onBought(member.id, quantity);
                   setShowPicker(false);
                 }}
                 className="w-full flex items-center justify-between px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors text-left"

@@ -6,6 +6,12 @@ import { useProductGroups } from './useProductGroups';
 import { ProductWithCategory } from '@/lib/supabase/types';
 import { getShoppingQuantity } from '@/lib/utils/stock';
 
+export interface GroupMember {
+  id: string;
+  name: string;
+  currentStock: number;
+}
+
 export interface ShoppingItem {
   id: string; // product id or group id
   name: string;
@@ -16,6 +22,7 @@ export interface ShoppingItem {
   // For groups: the product to add stock to (lowest stock member). Null when group has no products yet.
   targetProductId: string | null;
   groupMinStock?: number;
+  groupMembers?: GroupMember[];
 }
 
 export interface ShoppingGroup {
@@ -70,6 +77,7 @@ export function useShoppingList() {
         isGroup: true,
         targetProductId: target?.id ?? null,
         groupMinStock: groupMinStock,
+        groupMembers: members.map(m => ({ id: m.id, name: m.name, currentStock: Number(m.current_stock) })),
         category: firstMember?.category || { id: 'uncategorized', name: 'Other', icon: '📦' },
       });
     }

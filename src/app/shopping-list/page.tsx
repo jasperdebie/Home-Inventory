@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import { useShoppingList } from '@/lib/hooks/useShoppingList';
 import { useShoppingBought } from '@/lib/hooks/useShoppingBought';
+import { useShoppingItems } from '@/lib/hooks/useShoppingItems';
 import { ShoppingList } from '@/components/shopping/ShoppingList';
+import { AdHocShoppingList } from '@/components/shopping/AdHocShoppingList';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 export default function ShoppingListPage() {
   const { groups, totalItems, loading, addStockChange } = useShoppingList();
   const { toggleChecked, clearAll } = useShoppingBought();
+  const { items: adHocItems, addItem, toggleItem, deleteItem } = useShoppingItems();
   const { toast } = useToast();
 
   const checkedIds = useMemo(() => {
@@ -77,6 +80,14 @@ export default function ShoppingListPage() {
         checkedIds={checkedIds}
         onToggleChecked={handleToggleChecked}
       />
+      <div className="mt-4">
+        <AdHocShoppingList
+          items={adHocItems}
+          onAdd={addItem}
+          onToggle={toggleItem}
+          onDelete={deleteItem}
+        />
+      </div>
     </div>
   );
 }

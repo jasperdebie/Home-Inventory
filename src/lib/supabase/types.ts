@@ -45,3 +45,10 @@ export type ProductWithCategory = Product & {
   category: Category | null;
   product_group: ProductGroup | null;
 };
+
+export type ShoppingItem = {
+  id: string;
+  name: string;
+  is_checked: boolean;
+  created_at: string;
+};

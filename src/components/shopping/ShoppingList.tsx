@@ -7,9 +7,11 @@ import { Card } from '@/components/ui/Card';
 interface ShoppingListProps {
   groups: ShoppingGroup[];
   onBought: (productId: string, quantity: number) => void;
+  checkedIds: Set<string>;
+  onToggleChecked: (id: string) => void;
 }
 
-export function ShoppingList({ groups, onBought }: ShoppingListProps) {
+export function ShoppingList({ groups, onBought, checkedIds, onToggleChecked }: ShoppingListProps) {
   if (groups.length === 0) {
     return (
       <div className="text-center py-12">
@@ -36,6 +38,8 @@ export function ShoppingList({ groups, onBought }: ShoppingListProps) {
                 key={item.id}
                 item={item}
                 onBought={onBought}
+                checked={checkedIds.has(item.id)}
+                onToggleChecked={onToggleChecked}
               />
             ))}
           </div>

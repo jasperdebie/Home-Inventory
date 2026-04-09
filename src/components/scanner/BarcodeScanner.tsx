@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -30,6 +32,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [polyfillReady, setPolyfillReady] = useState(false);
+  const [manualBarcode, setManualBarcode] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ScannerComponent, setScannerComponent] = useState<any>(null);
 
@@ -104,6 +107,18 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     []
   );
 
+  const handleManualSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const value = manualBarcode.trim();
+      if (value) {
+        onScanRef.current(value);
+        setManualBarcode('');
+      }
+    },
+    [manualBarcode]
+  );
+
   const showScanner = active && polyfillReady && ScannerComponent && selectedCameraId;
 
   return (
@@ -148,6 +163,19 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
           <p className="text-white text-sm text-center px-4">{error}</p>
         </div>
       )}
+
+      <div className="mt-2 text-center text-sm text-gray-400">or enter manually</div>
+      <form onSubmit={handleManualSubmit} className="mt-1 flex gap-2">
+        <Input
+          placeholder="Type barcode..."
+          value={manualBarcode}
+          onChange={(e) => setManualBarcode(e.target.value)}
+          className="flex-1"
+        />
+        <Button type="submit" disabled={!manualBarcode.trim()}>
+          Look Up
+        </Button>
+      </form>
     </div>
   );
 }

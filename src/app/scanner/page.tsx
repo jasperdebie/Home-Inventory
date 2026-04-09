@@ -6,8 +6,6 @@ import { ScanResultDialog } from '@/components/scanner/ScanResultDialog';
 import { useBarcodeLookup } from '@/lib/hooks/useBarcodeLookup';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { useToast } from '@/components/ui/Toast';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { ProductWithCategory } from '@/lib/supabase/types';
 import { formatStockChange } from '@/lib/utils/format';
@@ -18,7 +16,6 @@ export default function ScannerPage() {
   const { toast } = useToast();
 
   const [scannerActive, setScannerActive] = useState(true);
-  const [manualBarcode, setManualBarcode] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [foundProduct, setFoundProduct] = useState<ProductWithCategory | null>(null);
   const [suggestion, setSuggestion] = useState<{ name: string; barcode: string } | null>(null);
@@ -54,14 +51,6 @@ export default function ScannerPage() {
     }
   };
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (manualBarcode.trim()) {
-      handleBarcode(manualBarcode.trim());
-      setManualBarcode('');
-    }
-  };
-
   return (
     <div className="max-w-lg mx-auto space-y-4">
       <BarcodeScanner onScan={handleBarcode} active={scannerActive} />
@@ -72,20 +61,6 @@ export default function ScannerPage() {
           <span className="text-sm text-gray-500">Looking up barcode...</span>
         </div>
       )}
-
-      <div className="text-center text-sm text-gray-400">or enter manually</div>
-
-      <form onSubmit={handleManualSubmit} className="flex gap-2">
-        <Input
-          placeholder="Type barcode..."
-          value={manualBarcode}
-          onChange={(e) => setManualBarcode(e.target.value)}
-          className="flex-1"
-        />
-        <Button type="submit" disabled={!manualBarcode.trim()}>
-          Look Up
-        </Button>
-      </form>
 
       <ScanResultDialog
         open={dialogOpen}

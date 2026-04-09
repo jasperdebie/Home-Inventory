@@ -24,6 +24,7 @@ export type Product = {
   current_stock: number;
   image_url: string | null;
   notes: string | null;
+  expires_at: string | null;
   is_archived: boolean;
   is_bought: boolean;
   created_at: string;

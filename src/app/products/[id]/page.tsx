@@ -35,6 +35,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [barcodeError, setBarcodeError] = useState('');
   const [editMinStock, setEditMinStock] = useState('1');
   const [editName, setEditName] = useState('');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
 
   useEffect(() => {
     const supabase = createClient();
@@ -77,6 +78,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       setEditBarcode(product.barcode ?? '');
       setEditMinStock(String(product.min_stock));
       setEditName(product.name);
+      setEditExpiresAt(product.expires_at ?? '');
     }
   }, [product?.id]);
 
@@ -207,6 +209,28 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               value={editMinStock}
               onChange={(e) => setEditMinStock(e.target.value)}
               onBlur={handleMinStockBlur}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="col-span-2">
+            <p className="text-gray-500 mb-1">Houdbaar tot</p>
+            <input
+              type="date"
+              aria-label="Expiry date"
+              value={editExpiresAt}
+              onChange={(e) => setEditExpiresAt(e.target.value)}
+              onBlur={async () => {
+                const val = editExpiresAt || null;
+                if (val === (product.expires_at ?? null)) return;
+                try {
+                  await updateProduct(product.id, { expires_at: val });
+                  setProduct(prev => prev ? { ...prev, expires_at: val } : prev);
+                  toast(val ? 'Houdbaarheidsdatum bijgewerkt' : 'Houdbaarheidsdatum verwijderd');
+                } catch {
+                  toast('Bijwerken mislukt', 'error');
+                  setEditExpiresAt(product.expires_at ?? '');
+                }
+              }}
               className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>

@@ -2,6 +2,7 @@
 
 import { useProducts } from '@/lib/hooks/useProducts';
 import { LowStockAlert } from '@/components/dashboard/LowStockAlert';
+import { ExpiringAlert } from '@/components/dashboard/ExpiringAlert';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { QuickAddButton, QuickSubtractButton } from '@/components/dashboard/QuickAddButton';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
@@ -26,6 +27,7 @@ export default function DashboardPage() {
         <QuickSubtractButton />
       </div>
       <LowStockAlert products={products} />
+      <ExpiringAlert products={products} />
       <RecentActivity />
     </div>
   );

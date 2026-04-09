@@ -33,6 +33,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
   const [minStock, setMinStock] = useState(initialBarcode ? '0' : '1');
   const [initialStock, setInitialStock] = useState(initialBarcode ? '1' : '0');
   const [notes, setNotes] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -66,6 +67,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
         barcode: trimmedBarcode,
         min_stock: Number(minStock) >= 0 ? Number(minStock) : 0,
         notes: notes.trim() || null,
+        expires_at: expiresAt || null,
         initial_stock: Number(initialStock) || 0,
       });
       toast(`Added ${name.trim()}`);
@@ -193,6 +195,13 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
           onChange={(e) => setInitialStock(e.target.value)}
         />
       </div>
+
+      <Input
+        label="Expires"
+        type="date"
+        value={expiresAt}
+        onChange={(e) => setExpiresAt(e.target.value)}
+      />
 
       <Input
         label="Notes"

@@ -19,6 +19,7 @@ export interface ShoppingItem {
   currentStock: number;
   unit: string;
   isGroup: boolean;
+  isBought: boolean;
   // For groups: the product to add stock to (lowest stock member). Null when group has no products yet.
   targetProductId: string | null;
   groupMinStock?: number;
@@ -75,6 +76,7 @@ export function useShoppingList() {
         currentStock: totalStock,
         unit: target?.unit ?? 'pcs',
         isGroup: true,
+        isBought: group.is_bought,
         targetProductId: target?.id ?? null,
         groupMinStock: groupMinStock,
         groupMembers: members.map(m => ({ id: m.id, name: m.name, currentStock: Number(m.current_stock) })),
@@ -95,6 +97,7 @@ export function useShoppingList() {
         currentStock: Number(product.current_stock),
         unit: product.unit,
         isGroup: false,
+        isBought: product.is_bought,
         targetProductId: product.id,
         category: product.category || { id: 'uncategorized', name: 'Other', icon: '📦' },
       });

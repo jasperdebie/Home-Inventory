@@ -1,59 +1,33 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useShoppingList } from '@/lib/hooks/useShoppingList';
+import { useShoppingBought } from '@/lib/hooks/useShoppingBought';
 import { ShoppingList } from '@/components/shopping/ShoppingList';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 
-const CHECKED_STORAGE_KEY = 'shopping-list-checked';
-
-function loadCheckedIds(): Set<string> {
-  try {
-    const stored = localStorage.getItem(CHECKED_STORAGE_KEY);
-    return stored ? new Set(JSON.parse(stored)) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function saveCheckedIds(ids: Set<string>) {
-  localStorage.setItem(CHECKED_STORAGE_KEY, JSON.stringify([...ids]));
-}
-
 export default function ShoppingListPage() {
   const { groups, totalItems, loading, addStockChange } = useShoppingList();
+  const { toggleChecked, clearAll } = useShoppingBought();
   const { toast } = useToast();
-  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => loadCheckedIds());
 
-  // Sync to localStorage on change
-  useEffect(() => {
-    saveCheckedIds(checkedIds);
-  }, [checkedIds]);
-
-  // Clean up checked IDs that are no longer on the shopping list
-  useEffect(() => {
-    if (loading) return;
-    const currentIds = new Set(groups.flatMap(g => g.items.map(i => i.id)));
-    setCheckedIds(prev => {
-      const cleaned = new Set([...prev].filter(id => currentIds.has(id)));
-      if (cleaned.size !== prev.size) return cleaned;
-      return prev;
-    });
-  }, [groups, loading]);
-
-  const handleToggleChecked = useCallback((id: string) => {
-    setCheckedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
+  const checkedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of groups) {
+      for (const item of group.items) {
+        if (item.isBought) ids.add(item.id);
       }
-      return next;
-    });
-  }, []);
+    }
+    return ids;
+  }, [groups]);
+
+  const handleToggleChecked = (id: string) => {
+    const item = groups.flatMap(g => g.items).find(i => i.id === id);
+    if (!item) return;
+    toggleChecked(id, item.isGroup, item.isBought);
+  };
 
   const handleBought = async (productId: string, quantity: number) => {
     try {
@@ -64,9 +38,13 @@ export default function ShoppingListPage() {
     }
   };
 
-  const handleClearChecked = useCallback(() => {
-    setCheckedIds(new Set());
-  }, []);
+  const handleClearAll = () => {
+    const boughtItems = groups
+      .flatMap(g => g.items)
+      .filter(i => i.isBought)
+      .map(i => ({ id: i.id, isGroup: i.isGroup }));
+    clearAll(boughtItems);
+  };
 
   if (loading) {
     return (
@@ -87,7 +65,7 @@ export default function ShoppingListPage() {
             {checkedCount > 0 && ` · ${checkedCount} bought`}
           </p>
           {checkedCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleClearChecked}>
+            <Button variant="ghost" size="sm" onClick={handleClearAll}>
               Clear checks
             </Button>
           )}

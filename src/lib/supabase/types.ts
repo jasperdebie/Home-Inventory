@@ -9,6 +9,7 @@ export type ProductGroup = {
   id: string;
   name: string;
   min_stock: number;
+  is_bought: boolean;
   created_at: string;
 };
 
@@ -24,6 +25,7 @@ export type Product = {
   image_url: string | null;
   notes: string | null;
   is_archived: boolean;
+  is_bought: boolean;
   created_at: string;
   updated_at: string;
   category?: Category;

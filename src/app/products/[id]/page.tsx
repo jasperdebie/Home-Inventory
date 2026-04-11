@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -36,6 +36,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [editMinStock, setEditMinStock] = useState('1');
   const [editName, setEditName] = useState('');
   const [editExpiresAt, setEditExpiresAt] = useState('');
+  const initializedForId = useRef<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -71,14 +72,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     };
   }, [id, router]);
 
-  // Sync editBarcode when navigating to a different product (but not on stock updates)
+  // Sync edit fields only once per product (not on every refetch/realtime update)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (product) {
+    if (product && initializedForId.current !== product.id) {
       setEditBarcode(product.barcode ?? '');
       setEditMinStock(String(product.min_stock));
       setEditName(product.name);
       setEditExpiresAt(product.expires_at ?? '');
+      initializedForId.current = product.id;
     }
   }, [product?.id]);
 
@@ -172,6 +174,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onBlur={handleNameBlur}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
               className="text-xl font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-full"
             />
             {product.category && (

@@ -33,6 +33,9 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [polyfillReady, setPolyfillReady] = useState(false);
   const [manualBarcode, setManualBarcode] = useState('');
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const scannerContainerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ScannerComponent, setScannerComponent] = useState<any>(null);
 
@@ -84,6 +87,65 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
       });
   }, [active, selectedCameraId]);
 
+  const showScanner = active && polyfillReady && ScannerComponent && selectedCameraId;
+
+  // Detect torch support and apply torch state
+  useEffect(() => {
+    if (!showScanner) {
+      setTorchSupported(false);
+      setTorchOn(false);
+      return;
+    }
+
+    // Wait for the video element to have an active stream
+    const timer = setTimeout(() => {
+      const container = scannerContainerRef.current;
+      if (!container) return;
+      const video = container.querySelector('video');
+      if (!video || !video.srcObject) return;
+
+      const stream = video.srcObject as MediaStream;
+      const track = stream.getVideoTracks()[0];
+      if (!track) return;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const capabilities = track.getCapabilities() as any;
+      if (capabilities?.torch) {
+        setTorchSupported(true);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showScanner, selectedCameraId]);
+
+  const toggleTorch = useCallback(async () => {
+    const container = scannerContainerRef.current;
+    if (!container) return;
+    const video = container.querySelector('video');
+    if (!video || !video.srcObject) return;
+
+    const stream = video.srcObject as MediaStream;
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+
+    const newTorchState = !torchOn;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await track.applyConstraints({ advanced: [{ torch: newTorchState } as any] });
+      setTorchOn(newTorchState);
+    } catch {
+      // Torch not supported or failed
+    }
+  }, [torchOn]);
+
+  // Turn off torch when scanner becomes inactive
+  useEffect(() => {
+    if (!active && torchOn) {
+      setTorchOn(false);
+    }
+  }, [active, torchOn]);
+
   const handleCapture = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (barcodes: any[]) => {
@@ -119,8 +181,6 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     [manualBarcode]
   );
 
-  const showScanner = active && polyfillReady && ScannerComponent && selectedCameraId;
-
   return (
     <div className="relative">
       {cameras.length > 1 && (
@@ -139,7 +199,8 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
         </div>
       )}
       <div
-        className="w-full rounded-xl overflow-hidden bg-black"
+        ref={scannerContainerRef}
+        className="relative w-full rounded-xl overflow-hidden bg-black"
         style={{ minHeight: 300 }}
       >
         {showScanner && (
@@ -156,6 +217,28 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
             }}
             style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: 300 }}
           />
+        )}
+        {torchSupported && showScanner && (
+          <button
+            type="button"
+            onClick={toggleTorch}
+            className={`absolute top-3 right-3 z-10 p-2 rounded-full transition-colors ${
+              torchOn
+                ? 'bg-yellow-400 text-gray-900'
+                : 'bg-gray-800/70 text-white'
+            }`}
+            title={torchOn ? 'Zaklamp uit' : 'Zaklamp aan'}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {torchOn ? (
+                <>
+                  <path d="M9 2h6l-1 6h3l-7 10 1-6H8z" fill="currentColor" />
+                </>
+              ) : (
+                <path d="M9 2h6l-1 6h3l-7 10 1-6H8z" />
+              )}
+            </svg>
+          </button>
         )}
       </div>
       {error && (

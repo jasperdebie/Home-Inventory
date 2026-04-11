@@ -62,7 +62,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     try {
       await updateGroup(id, {
         name: editName.trim(),
-        min_stock: Number(editMinStock) || 1,
+        min_stock: editMinStock === '' ? 1 : Number(editMinStock),
       });
       toast('Group updated');
       setEditing(false);

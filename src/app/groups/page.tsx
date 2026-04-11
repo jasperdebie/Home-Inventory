@@ -29,7 +29,7 @@ export default function GroupsPage() {
     if (!newName.trim()) return;
     setSaving(true);
     try {
-      await createGroup({ name: newName.trim(), min_stock: Number(newMinStock) || 1 });
+      await createGroup({ name: newName.trim(), min_stock: newMinStock === '' ? 1 : Number(newMinStock) });
       toast(`Created group "${newName.trim()}"`);
       setNewName('');
       setNewMinStock('1');

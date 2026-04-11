@@ -27,6 +27,11 @@ export default function GroupsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+    const exists = groups.some(g => g.name.toLowerCase() === newName.trim().toLowerCase());
+    if (exists) {
+      toast(`Group "${newName.trim()}" already exists`, 'error');
+      return;
+    }
     setSaving(true);
     try {
       await createGroup({ name: newName.trim(), min_stock: newMinStock === '' ? 1 : Number(newMinStock) });

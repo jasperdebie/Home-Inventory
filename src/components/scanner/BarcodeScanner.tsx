@@ -36,7 +36,10 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
   const [manualBarcode, setManualBarcode] = useState('');
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
+  const [focusSupported, setFocusSupported] = useState(false);
   const scannerContainerRef = useRef<HTMLDivElement>(null);
+  const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ScannerComponent, setScannerComponent] = useState<any>(null);
 
@@ -108,6 +111,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     if (!showScanner) {
       setTorchSupported(false);
       setTorchOn(false);
+      setFocusSupported(false);
       return;
     }
 
@@ -126,6 +130,9 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
       const capabilities = track.getCapabilities() as any;
       if (capabilities?.torch) {
         setTorchSupported(true);
+      }
+      if (capabilities?.focusMode?.includes('manual') || capabilities?.focusMode?.includes('single-shot')) {
+        setFocusSupported(true);
       }
     }, 1000);
 
@@ -152,6 +159,50 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
       // Torch not supported or failed
     }
   }, [torchOn]);
+
+  const handleTapToFocus = useCallback(
+    async (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+      const container = scannerContainerRef.current;
+      if (!container) return;
+      const video = container.querySelector('video');
+      if (!video || !video.srcObject) return;
+
+      const rect = container.getBoundingClientRect();
+      let clientX: number, clientY: number;
+      if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      // Relative position (0-1) within the video container
+      const x = (clientX - rect.left) / rect.width;
+      const y = (clientY - rect.top) / rect.height;
+
+      // Show visual indicator
+      setFocusPoint({ x: clientX - rect.left, y: clientY - rect.top });
+      if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+      focusTimeoutRef.current = setTimeout(() => setFocusPoint(null), 1500);
+
+      if (!focusSupported) return;
+
+      const stream = video.srcObject as MediaStream;
+      const track = stream.getVideoTracks()[0];
+      if (!track) return;
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await track.applyConstraints({
+          advanced: [{ pointsOfInterest: [{ x, y }], focusMode: 'single-shot' } as any],
+        });
+      } catch {
+        // Focus not supported or failed — visual indicator still shows
+      }
+    },
+    [focusSupported]
+  );
 
   // Turn off torch when scanner becomes inactive
   useEffect(() => {
@@ -223,6 +274,8 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
         ref={scannerContainerRef}
         className="relative w-full rounded-xl overflow-hidden bg-black"
         style={{ minHeight: 300 }}
+        onClick={showScanner ? handleTapToFocus : undefined}
+        onTouchStart={showScanner ? handleTapToFocus : undefined}
       >
         {showScanner && (
           <ScannerComponent
@@ -258,6 +311,25 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
               )}
             </svg>
           </button>
+        )}
+        {focusPoint && showScanner && (
+          <div
+            className="absolute z-10 pointer-events-none"
+            style={{
+              left: focusPoint.x - 30,
+              top: focusPoint.y - 30,
+              width: 60,
+              height: 60,
+            }}
+          >
+            <div
+              className="w-full h-full rounded-lg border-2 border-yellow-400 animate-ping"
+              style={{ animationDuration: '0.6s', animationIterationCount: '2' }}
+            />
+            <div
+              className="absolute inset-0 rounded-lg border-2 border-yellow-400"
+            />
+          </div>
         )}
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 rounded-xl z-20 px-6">

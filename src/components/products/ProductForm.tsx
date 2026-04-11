@@ -34,6 +34,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
   const [initialStock, setInitialStock] = useState(initialBarcode ? '1' : '0');
   const [notes, setNotes] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [isLowPrio, setIsLowPrio] = useState(false);
   const [saving, setSaving] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -68,6 +69,7 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
         min_stock: Number(minStock) >= 0 ? Number(minStock) : 0,
         notes: notes.trim() || null,
         expires_at: expiresAt || null,
+        is_low_prio: isLowPrio,
         initial_stock: Number(initialStock) || 0,
       });
       toast(`Added ${name.trim()}`);
@@ -202,6 +204,16 @@ export function ProductForm({ initialBarcode, initialName }: ProductFormProps) {
         value={expiresAt}
         onChange={(e) => setExpiresAt(e.target.value)}
       />
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isLowPrio}
+          onChange={(e) => setIsLowPrio(e.target.checked)}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-sm font-medium text-gray-700">Low priority</span>
+      </label>
 
       <Input
         label="Notes"

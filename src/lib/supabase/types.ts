@@ -27,6 +27,7 @@ export type Product = {
   expires_at: string | null;
   is_archived: boolean;
   is_bought: boolean;
+  is_low_prio: boolean;
   created_at: string;
   updated_at: string;
   category?: Category;

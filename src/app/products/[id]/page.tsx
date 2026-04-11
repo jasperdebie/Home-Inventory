@@ -259,6 +259,26 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             />
             {barcodeError && <p className="mt-0.5 text-xs text-red-600">{barcodeError}</p>}
           </div>
+          <div className="col-span-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={product.is_low_prio}
+                onChange={async (e) => {
+                  const val = e.target.checked;
+                  try {
+                    await updateProduct(product.id, { is_low_prio: val });
+                    setProduct(prev => prev ? { ...prev, is_low_prio: val } : prev);
+                    toast(val ? 'Marked as low priority' : 'Removed low priority');
+                  } catch {
+                    toast('Failed to update', 'error');
+                  }
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Low priority</span>
+            </label>
+          </div>
           {product.notes && (
             <div className="col-span-2">
               <span className="text-gray-500">Notes:</span>

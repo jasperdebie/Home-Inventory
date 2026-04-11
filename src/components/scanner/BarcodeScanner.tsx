@@ -58,6 +58,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
   useEffect(() => {
     if (!active) return;
 
+    setError(null);
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((tempStream) => {
@@ -81,6 +82,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
           );
           setSelectedCameraId(backCam?.deviceId ?? videoDevices[videoDevices.length - 1].deviceId);
         }
+        setError(null);
       })
       .catch(() => {
         setError('Camera access denied. Please allow camera permissions.');
@@ -231,21 +233,19 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {torchOn ? (
-                <>
-                  <path d="M9 2h6l-1 6h3l-7 10 1-6H8z" fill="currentColor" />
-                </>
+                <path d="M9 2h6l-1 6h3l-7 10 1-6H8z" fill="currentColor" />
               ) : (
                 <path d="M9 2h6l-1 6h3l-7 10 1-6H8z" />
               )}
             </svg>
           </button>
         )}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-xl z-20">
+            <p className="text-white text-sm text-center px-4">{error}</p>
+          </div>
+        )}
       </div>
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-xl">
-          <p className="text-white text-sm text-center px-4">{error}</p>
-        </div>
-      )}
 
       <div className="mt-2 text-center text-sm text-gray-400">or enter manually</div>
       <form onSubmit={handleManualSubmit} className="mt-1 flex gap-2">

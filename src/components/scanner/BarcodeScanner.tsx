@@ -31,6 +31,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
   const [cameras, setCameras] = useState<CameraInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [polyfillReady, setPolyfillReady] = useState(false);
   const [manualBarcode, setManualBarcode] = useState('');
   const [torchOn, setTorchOn] = useState(false);
@@ -59,6 +60,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     if (!active) return;
 
     setError(null);
+    setPermissionDenied(false);
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((tempStream) => {
@@ -84,8 +86,18 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
         }
         setError(null);
       })
-      .catch(() => {
-        setError('Camera access denied. Please allow camera permissions.');
+      .catch(async () => {
+        // Check if permission is permanently denied
+        let denied = false;
+        try {
+          const status = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          denied = status.state === 'denied';
+        } catch {
+          // permissions.query not supported, assume denied
+          denied = true;
+        }
+        setPermissionDenied(denied);
+        setError('Camera access denied');
       });
   }, [active, selectedCameraId]);
 
@@ -161,6 +173,13 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     },
     []
   );
+
+  const retryCamera = useCallback(() => {
+    setError(null);
+    setPermissionDenied(false);
+    setCameras([]);
+    setSelectedCameraId(null);
+  }, []);
 
   const handleCameraChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -241,8 +260,47 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
           </button>
         )}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-xl z-20">
-            <p className="text-white text-sm text-center px-4">{error}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 rounded-xl z-20 px-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-4">
+              <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+              <line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" strokeWidth="2" />
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <p className="text-white font-medium text-center mb-2">
+              Camera toegang geweigerd
+            </p>
+            {permissionDenied ? (
+              <div className="text-gray-300 text-sm text-center space-y-3">
+                <p>De camera-toestemming is geblokkeerd. Wijzig dit in je instellingen:</p>
+                <ol className="text-left text-xs space-y-1 text-gray-400">
+                  <li>1. Tik op het slot-icoon in de adresbalk</li>
+                  <li>2. Ga naar <strong className="text-gray-300">Machtigingen</strong> of <strong className="text-gray-300">Site-instellingen</strong></li>
+                  <li>3. Zet <strong className="text-gray-300">Camera</strong> op Toestaan</li>
+                  <li>4. Herlaad de pagina</li>
+                </ol>
+                <div className="flex gap-2 justify-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Pagina herladen
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-gray-300 text-sm text-center space-y-3">
+                <p>Sta camera-toegang toe om barcodes te scannen.</p>
+                <button
+                  type="button"
+                  onClick={retryCamera}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Opnieuw proberen
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

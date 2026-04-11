@@ -55,9 +55,9 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
     return () => { cancelled = true; };
   }, []);
 
-  // Enumerate cameras
+  // Enumerate cameras (only once when active and no cameras enumerated yet)
   useEffect(() => {
-    if (!active) return;
+    if (!active || cameras.length > 0) return;
 
     setError(null);
     setPermissionDenied(false);
@@ -75,7 +75,7 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
             label: d.label || `Camera ${i + 1}`,
           }));
         setCameras(videoDevices);
-        if (videoDevices.length > 0 && !selectedCameraId) {
+        if (videoDevices.length > 0) {
           const backCam = videoDevices.find(
             (d) =>
               d.label.toLowerCase().includes('back') ||
@@ -84,7 +84,6 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
           );
           setSelectedCameraId(backCam?.deviceId ?? videoDevices[videoDevices.length - 1].deviceId);
         }
-        setError(null);
       })
       .catch(async () => {
         // Check if permission is permanently denied
@@ -99,7 +98,8 @@ export function BarcodeScanner({ onScan, active }: BarcodeScannerProps) {
         setPermissionDenied(denied);
         setError('Camera access denied');
       });
-  }, [active, selectedCameraId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, cameras.length]);
 
   const showScanner = active && polyfillReady && ScannerComponent && selectedCameraId;
 

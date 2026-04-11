@@ -10,6 +10,7 @@ export type ProductGroup = {
   name: string;
   min_stock: number;
   is_bought: boolean;
+  is_low_prio: boolean;
   created_at: string;
 };
 

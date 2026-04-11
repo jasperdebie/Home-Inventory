@@ -37,6 +37,7 @@ export function useShoppingList() {
 
   const shoppingGroups = useMemo(() => {
     const allItems: Array<ShoppingItem & { category: { id: string; name: string; icon: string; sort_order?: number } | null }> = [];
+    const lowPrioItems: typeof allItems = [];
 
     // Build a map of group_id → members for efficient lookup
     const groupMembersMap = new Map<string, typeof products>();
@@ -69,7 +70,7 @@ export function useShoppingList() {
 
       // Use the category of the first member for grouping (fall back to Other)
       const firstMember = members[0] ?? null;
-      allItems.push({
+      const groupItem = {
         id: group.id,
         name: group.name,
         needed: Math.max(1, Math.ceil(needed)),
@@ -81,16 +82,22 @@ export function useShoppingList() {
         groupMinStock: groupMinStock,
         groupMembers: members.map(m => ({ id: m.id, name: m.name, currentStock: Number(m.current_stock) })),
         category: firstMember?.category || { id: 'uncategorized', name: 'Other', icon: '📦' },
-      });
+      };
+
+      if (group.is_low_prio) {
+        lowPrioItems.push(groupItem);
+      } else {
+        allItems.push(groupItem);
+      }
     }
 
-    // Process ungrouped products
+    // Process ungrouped products (separate low prio)
     for (const product of products) {
       if (groupedProductIds.has(product.id)) continue;
 
       if (Number(product.current_stock) >= Number(product.min_stock)) continue;
 
-      allItems.push({
+      const item = {
         id: product.id,
         name: product.name,
         needed: getShoppingQuantity(product),
@@ -100,7 +107,13 @@ export function useShoppingList() {
         isBought: product.is_bought,
         targetProductId: product.id,
         category: product.category || { id: 'uncategorized', name: 'Other', icon: '📦' },
-      });
+      };
+
+      if (product.is_low_prio) {
+        lowPrioItems.push(item);
+      } else {
+        allItems.push(item);
+      }
     }
 
     // Group by category
@@ -116,15 +129,34 @@ export function useShoppingList() {
       grouped.get(key)!.items.push(item);
     }
 
-    return Array.from(grouped.values()).sort((a, b) => {
+    // Group low prio items by category
+    const lowPrioGrouped = new Map<string, ShoppingGroup>();
+    for (const item of lowPrioItems) {
+      const key = item.category?.id || 'uncategorized';
+      if (!lowPrioGrouped.has(key)) {
+        lowPrioGrouped.set(key, {
+          category: item.category,
+          items: [],
+        });
+      }
+      lowPrioGrouped.get(key)!.items.push(item);
+    }
+
+    const sortByCategory = (a: ShoppingGroup, b: ShoppingGroup) => {
       const aOrder = (a.category as { sort_order?: number })?.sort_order ?? 99;
       const bOrder = (b.category as { sort_order?: number })?.sort_order ?? 99;
       return aOrder - bOrder;
-    });
+    };
+
+    return {
+      main: Array.from(grouped.values()).sort(sortByCategory),
+      lowPrio: Array.from(lowPrioGrouped.values()).sort(sortByCategory),
+    };
   }, [products, productGroups]);
 
-  const totalItems = shoppingGroups.reduce((sum, g) => sum + g.items.length, 0);
+  const totalItems = shoppingGroups.main.reduce((sum, g) => sum + g.items.length, 0);
+  const totalLowPrio = shoppingGroups.lowPrio.reduce((sum, g) => sum + g.items.length, 0);
   const loading = productsLoading || groupsLoading;
 
-  return { groups: shoppingGroups, totalItems, loading, addStockChange };
+  return { groups: shoppingGroups.main, lowPrioGroups: shoppingGroups.lowPrio, totalItems, totalLowPrio, loading, addStockChange };
 }

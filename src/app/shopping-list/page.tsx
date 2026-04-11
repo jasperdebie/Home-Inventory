@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useShoppingList } from '@/lib/hooks/useShoppingList';
 import { useShoppingBought } from '@/lib/hooks/useShoppingBought';
 import { useShoppingItems } from '@/lib/hooks/useShoppingItems';
+import { createClient } from '@/lib/supabase/client';
 import { ShoppingList } from '@/components/shopping/ShoppingList';
 import { AdHocShoppingList } from '@/components/shopping/AdHocShoppingList';
 import { Spinner } from '@/components/ui/Spinner';
@@ -11,23 +12,23 @@ import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 
 export default function ShoppingListPage() {
-  const { groups, totalItems, loading, addStockChange } = useShoppingList();
+  const { groups, lowPrioGroups, totalItems, totalLowPrio, loading, addStockChange } = useShoppingList();
   const { toggleChecked, clearAll } = useShoppingBought();
   const { items: adHocItems, addItem, toggleItem, deleteItem } = useShoppingItems();
   const { toast } = useToast();
 
   const checkedIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const group of groups) {
+    for (const group of [...groups, ...lowPrioGroups]) {
       for (const item of group.items) {
         if (item.isBought) ids.add(item.id);
       }
     }
     return ids;
-  }, [groups]);
+  }, [groups, lowPrioGroups]);
 
   const handleToggleChecked = (id: string) => {
-    const item = groups.flatMap(g => g.items).find(i => i.id === id);
+    const item = [...groups, ...lowPrioGroups].flatMap(g => g.items).find(i => i.id === id);
     if (!item) return;
     toggleChecked(id, item.isGroup, item.isBought);
   };
@@ -41,8 +42,19 @@ export default function ShoppingListPage() {
     }
   };
 
+  const handleToggleLowPrio = useCallback(async (id: string, isGroup: boolean) => {
+    const supabase = createClient();
+    const table = isGroup ? 'product_groups' : 'products';
+    const { data } = await supabase.from(table).select('is_low_prio').eq('id', id).single();
+    if (!data) return;
+    const { error } = await supabase.from(table).update({ is_low_prio: !data.is_low_prio }).eq('id', id);
+    if (error) {
+      toast('Failed to update priority', 'error');
+    }
+  }, [toast]);
+
   const handleClearAll = () => {
-    const boughtItems = groups
+    const boughtItems = [...groups, ...lowPrioGroups]
       .flatMap(g => g.items)
       .filter(i => i.isBought)
       .map(i => ({ id: i.id, isGroup: i.isGroup }));
@@ -79,6 +91,7 @@ export default function ShoppingListPage() {
         onBought={handleBought}
         checkedIds={checkedIds}
         onToggleChecked={handleToggleChecked}
+        onToggleLowPrio={handleToggleLowPrio}
       />
       <div className="mt-4">
         <AdHocShoppingList
@@ -88,6 +101,21 @@ export default function ShoppingListPage() {
           onDelete={deleteItem}
         />
       </div>
+      {totalLowPrio > 0 && (
+        <div className="mt-6">
+          <p className="text-sm text-gray-500 mb-3">
+            🔽 Low priority ({totalLowPrio})
+          </p>
+          <ShoppingList
+            groups={lowPrioGroups}
+            onBought={handleBought}
+            checkedIds={checkedIds}
+            onToggleChecked={handleToggleChecked}
+            onToggleLowPrio={handleToggleLowPrio}
+            isLowPrio
+          />
+        </div>
+      )}
     </div>
   );
 }

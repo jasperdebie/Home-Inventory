@@ -140,6 +140,23 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               <span className="text-3xl font-bold text-gray-900">{formatStock(totalStock)}</span>
               <p className="text-sm text-gray-500">total stock across {members.length} product{members.length !== 1 ? 's' : ''}</p>
             </div>
+            <label className="flex items-center gap-2 cursor-pointer mt-3">
+              <input
+                type="checkbox"
+                checked={group.is_low_prio}
+                onChange={async (e) => {
+                  const val = e.target.checked;
+                  try {
+                    await updateGroup(id, { is_low_prio: val });
+                    toast(val ? 'Marked as low priority' : 'Removed low priority');
+                  } catch {
+                    toast('Failed to update', 'error');
+                  }
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Low priority</span>
+            </label>
             <Button variant="ghost" size="sm" onClick={startEdit} className="w-full mt-2">
               Edit Group
             </Button>

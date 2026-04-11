@@ -11,9 +11,11 @@ interface ShoppingItemProps {
   onBought: (targetProductId: string, quantity: number) => void;
   checked: boolean;
   onToggleChecked: (id: string) => void;
+  onToggleLowPrio: (id: string, isGroup: boolean) => void;
+  isLowPrio?: boolean;
 }
 
-export function ShoppingItem({ item, onBought, checked, onToggleChecked }: ShoppingItemProps) {
+export function ShoppingItem({ item, onBought, checked, onToggleChecked, onToggleLowPrio, isLowPrio }: ShoppingItemProps) {
   const [showQuantity, setShowQuantity] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [quantity, setQuantity] = useState(item.needed);
@@ -59,11 +61,26 @@ export function ShoppingItem({ item, onBought, checked, onToggleChecked }: Shopp
             Need {item.needed} {item.unit} (have {item.currentStock})
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => onToggleLowPrio(item.id, item.isGroup)}
+          className="ml-2 flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          aria-label={isLowPrio ? 'Move to main list' : 'Move to low priority'}
+          title={isLowPrio ? 'Move to main list' : 'Move to low priority'}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            {isLowPrio ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            )}
+          </svg>
+        </button>
         <Button
           size="sm"
           onClick={handleBought}
           disabled={!item.targetProductId}
-          className="ml-3 flex-shrink-0"
+          className="ml-1 flex-shrink-0"
           title={!item.targetProductId ? 'Add a product to this group first' : undefined}
         >
           +{item.needed} Bought

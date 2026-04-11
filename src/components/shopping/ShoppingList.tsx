@@ -9,9 +9,11 @@ interface ShoppingListProps {
   onBought: (productId: string, quantity: number) => void;
   checkedIds: Set<string>;
   onToggleChecked: (id: string) => void;
+  onToggleLowPrio: (id: string, isGroup: boolean) => void;
+  isLowPrio?: boolean;
 }
 
-export function ShoppingList({ groups, onBought, checkedIds, onToggleChecked }: ShoppingListProps) {
+export function ShoppingList({ groups, onBought, checkedIds, onToggleChecked, onToggleLowPrio, isLowPrio }: ShoppingListProps) {
   if (groups.length === 0) {
     return (
       <div className="text-center py-12">
@@ -40,6 +42,8 @@ export function ShoppingList({ groups, onBought, checkedIds, onToggleChecked }: 
                 onBought={onBought}
                 checked={checkedIds.has(item.id)}
                 onToggleChecked={onToggleChecked}
+                onToggleLowPrio={onToggleLowPrio}
+                isLowPrio={isLowPrio}
               />
             ))}
           </div>

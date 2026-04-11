@@ -72,7 +72,7 @@ export default function ShoppingListPage() {
   const checkedCount = checkedIds.size;
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl mx-auto">
       {totalItems > 0 && (
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm text-gray-500">

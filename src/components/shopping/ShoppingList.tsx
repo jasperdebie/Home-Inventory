@@ -25,7 +25,7 @@ export function ShoppingList({ groups, onBought, checkedIds, onToggleChecked, on
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
       {groups.map((group) => (
         <Card key={group.category?.id || 'uncategorized'} padding={false}>
           <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 rounded-t-xl">

@@ -36,6 +36,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [editMinStock, setEditMinStock] = useState('1');
   const [editName, setEditName] = useState('');
   const [editExpiresAt, setEditExpiresAt] = useState('');
+  const [showExtraNeeded, setShowExtraNeeded] = useState(false);
+  const [extraQuantity, setExtraQuantity] = useState(1);
   const initializedForId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -279,6 +281,35 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <span className="text-sm text-gray-700">Low priority</span>
             </label>
           </div>
+          {!product.group_id && (
+            <div className="col-span-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500 text-sm">Extra op boodschappenlijst</p>
+                  {product.extra_needed > 0 && (
+                    <p className="text-xs text-blue-600">+{product.extra_needed} extra gepland</p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant={product.extra_needed > 0 ? 'secondary' : 'primary'}
+                  onClick={() => {
+                    if (product.extra_needed > 0) {
+                      // Clear extra_needed
+                      updateProduct(product.id, { extra_needed: 0 });
+                      setProduct(prev => prev ? { ...prev, extra_needed: 0 } : prev);
+                      toast('Extra verwijderd van lijst');
+                    } else {
+                      setExtraQuantity(1);
+                      setShowExtraNeeded(true);
+                    }
+                  }}
+                >
+                  {product.extra_needed > 0 ? 'Annuleer extra' : '+ Voeg extra toe'}
+                </Button>
+              </div>
+            </div>
+          )}
           {product.notes && (
             <div className="col-span-2">
               <span className="text-gray-500">Notes:</span>
@@ -344,6 +375,36 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           Delete
         </Button>
       </div>
+
+      <Dialog open={showExtraNeeded} onClose={() => setShowExtraNeeded(false)} title="Extra toevoegen aan lijst">
+        <p className="text-sm text-gray-500 mb-4">Hoeveel extra {product.name} wil je op de boodschappenlijst zetten?</p>
+        <div className="flex justify-center py-4">
+          <StockAdjuster
+            currentStock={extraQuantity}
+            onAdjust={(delta) => setExtraQuantity(Math.max(1, extraQuantity + delta))}
+            size="lg"
+            unit={product.unit}
+          />
+        </div>
+        <Button
+          onClick={async () => {
+            try {
+              await updateProduct(product.id, { extra_needed: extraQuantity });
+              setProduct(prev => prev ? { ...prev, extra_needed: extraQuantity } : prev);
+              toast(`+${extraQuantity} extra op boodschappenlijst`);
+              setShowExtraNeeded(false);
+            } catch {
+              toast('Mislukt', 'error');
+            }
+          }}
+          className="w-full mt-2"
+        >
+          Bevestig +{extraQuantity}
+        </Button>
+        <Button variant="ghost" onClick={() => setShowExtraNeeded(false)} className="w-full mt-1">
+          Annuleer
+        </Button>
+      </Dialog>
 
       <Dialog open={showDelete} onClose={() => setShowDelete(false)} title="Delete Product">
         <p className="text-sm text-gray-600 mb-4">

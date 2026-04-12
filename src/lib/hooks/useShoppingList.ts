@@ -57,10 +57,11 @@ export function useShoppingList() {
       const members = groupMembersMap.get(group.id) || [];
       const totalStock = members.reduce((sum, p) => sum + Number(p.current_stock), 0);
       const groupMinStock = Number(group.min_stock);
+      const extraNeeded = Number(group.extra_needed ?? 0);
+      const deficit = Math.max(groupMinStock - totalStock, 0);
+      const needed = deficit + extraNeeded;
 
-      if (totalStock >= groupMinStock) continue; // group is stocked
-
-      const needed = groupMinStock - totalStock;
+      if (needed <= 0) continue; // group is stocked and no extras requested
       // Target: member with lowest stock (null when group has no products yet)
       const target = members.length > 0
         ? members.reduce((lowest, m) =>
@@ -95,12 +96,13 @@ export function useShoppingList() {
     for (const product of products) {
       if (groupedProductIds.has(product.id)) continue;
 
-      if (Number(product.current_stock) >= Number(product.min_stock)) continue;
+      const needed = getShoppingQuantity(product);
+      if (needed <= 0) continue;
 
       const item = {
         id: product.id,
         name: product.name,
-        needed: getShoppingQuantity(product),
+        needed,
         currentStock: Number(product.current_stock),
         unit: product.unit,
         isGroup: false,

@@ -44,7 +44,7 @@ export function useProductGroups() {
     return data;
   }, [supabase]);
 
-  const updateGroup = useCallback(async (id: string, updates: Partial<Pick<ProductGroup, 'name' | 'min_stock' | 'is_low_prio'>>) => {
+  const updateGroup = useCallback(async (id: string, updates: Partial<Pick<ProductGroup, 'name' | 'min_stock' | 'extra_needed' | 'is_low_prio'>>) => {
     const { error } = await supabase
       .from('product_groups')
       .update(updates)

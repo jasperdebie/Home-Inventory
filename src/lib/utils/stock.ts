@@ -2,8 +2,8 @@ import { Product } from '@/lib/supabase/types';
 import { getStockStatus, StockStatus } from '@/lib/constants';
 
 export function getShoppingQuantity(product: Product): number {
-  if (product.current_stock >= product.min_stock) return 0;
-  return product.min_stock - product.current_stock;
+  const deficit = Math.max(product.min_stock - product.current_stock, 0);
+  return deficit + (product.extra_needed ?? 0);
 }
 
 export function getStockColor(status: StockStatus): string {

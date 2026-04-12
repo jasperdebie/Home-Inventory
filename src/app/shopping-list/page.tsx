@@ -36,6 +36,17 @@ export default function ShoppingListPage() {
   const handleBought = async (productId: string, quantity: number) => {
     try {
       await addStockChange(productId, quantity, 'add', 'Bought from shopping list');
+
+      // Reset extra_needed on the shopping list item (product or group) that was bought
+      const supabase = createClient();
+      const allItems = [...groups, ...lowPrioGroups].flatMap(g => g.items);
+      const item = allItems.find(i => i.targetProductId === productId || (i.isGroup && i.groupMembers?.some(m => m.id === productId)));
+      if (item && item.isGroup) {
+        await supabase.from('product_groups').update({ extra_needed: 0 }).eq('id', item.id);
+      } else if (item) {
+        await supabase.from('products').update({ extra_needed: 0 }).eq('id', item.id);
+      }
+
       toast(`Added ${quantity} to stock`);
     } catch {
       toast('Failed to update stock', 'error');

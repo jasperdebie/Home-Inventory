@@ -107,7 +107,7 @@ export function useProducts() {
   );
 
   const updateProduct = useCallback(
-    async (id: string, updates: Partial<{ name: string; category_id: string | null; group_id: string | null; unit: string; barcode: string | null; min_stock: number; notes: string | null; expires_at: string | null; is_archived: boolean; is_low_prio: boolean }>) => {
+    async (id: string, updates: Partial<{ name: string; category_id: string | null; group_id: string | null; unit: string; barcode: string | null; min_stock: number; extra_needed: number; notes: string | null; expires_at: string | null; is_archived: boolean; is_low_prio: boolean }>) => {
       const { error } = await supabase.from('products').update(updates).eq('id', id);
       if (error) throw error;
       await fetchProducts();

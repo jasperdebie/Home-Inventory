@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { Dialog } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
+import { StockAdjuster } from '@/components/products/StockAdjuster';
 import { getStockStatus } from '@/lib/constants';
 import { getStockBadgeColor } from '@/lib/utils/stock';
 import { formatStock } from '@/lib/utils/format';
@@ -28,6 +29,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   const [editMinStock, setEditMinStock] = useState('');
   const [showDelete, setShowDelete] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showExtraNeeded, setShowExtraNeeded] = useState(false);
+  const [extraQuantity, setExtraQuantity] = useState(1);
 
   const group = groups.find(g => g.id === id);
   const members = useMemo(() => products.filter(p => p.group_id === id), [products, id]);
@@ -157,6 +160,29 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               />
               <span className="text-sm text-gray-700">Low priority</span>
             </label>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t">
+              <div>
+                <p className="text-gray-500 text-sm">Extra op boodschappenlijst</p>
+                {group.extra_needed > 0 && (
+                  <p className="text-xs text-blue-600">+{group.extra_needed} extra gepland</p>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant={group.extra_needed > 0 ? 'secondary' : 'primary'}
+                onClick={() => {
+                  if (group.extra_needed > 0) {
+                    updateGroup(id, { extra_needed: 0 });
+                    toast('Extra verwijderd van lijst');
+                  } else {
+                    setExtraQuantity(1);
+                    setShowExtraNeeded(true);
+                  }
+                }}
+              >
+                {group.extra_needed > 0 ? 'Annuleer extra' : '+ Voeg extra toe'}
+              </Button>
+            </div>
             <Button variant="ghost" size="sm" onClick={startEdit} className="w-full mt-2">
               Edit Group
             </Button>
@@ -200,6 +226,36 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           Delete Group
         </Button>
       </div>
+
+      {/* Extra Needed Dialog */}
+      <Dialog open={showExtraNeeded} onClose={() => setShowExtraNeeded(false)} title="Extra toevoegen aan lijst">
+        <p className="text-sm text-gray-500 mb-4">Hoeveel extra {group.name} wil je op de boodschappenlijst zetten?</p>
+        <div className="flex justify-center py-4">
+          <StockAdjuster
+            currentStock={extraQuantity}
+            onAdjust={(delta) => setExtraQuantity(Math.max(1, extraQuantity + delta))}
+            size="lg"
+            unit={members[0]?.unit ?? 'pcs'}
+          />
+        </div>
+        <Button
+          onClick={async () => {
+            try {
+              await updateGroup(id, { extra_needed: extraQuantity });
+              toast(`+${extraQuantity} extra op boodschappenlijst`);
+              setShowExtraNeeded(false);
+            } catch {
+              toast('Mislukt', 'error');
+            }
+          }}
+          className="w-full mt-2"
+        >
+          Bevestig +{extraQuantity}
+        </Button>
+        <Button variant="ghost" onClick={() => setShowExtraNeeded(false)} className="w-full mt-1">
+          Annuleer
+        </Button>
+      </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={showDelete} onClose={() => setShowDelete(false)} title="Delete Group">

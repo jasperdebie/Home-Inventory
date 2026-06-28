@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { APP_NAME } from '@/lib/constants';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
+  '/home-inventory': 'Dashboard',
   '/products': 'Products',
   '/products/new': 'Add Product',
   '/shopping-list': 'Shopping List',

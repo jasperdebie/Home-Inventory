@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { APP_NAME } from '@/lib/constants';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', icon: '🏠' },
+  { href: '/home-inventory', label: 'Dashboard', icon: '🏠' },
   { href: '/products', label: 'Products', icon: '📦' },
   { href: '/groups', label: 'Groups', icon: '🔗' },
   { href: '/shopping-list', label: 'Shopping List', icon: '🛒' },
@@ -22,7 +22,7 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

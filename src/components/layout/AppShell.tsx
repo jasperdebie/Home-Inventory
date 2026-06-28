@@ -9,8 +9,10 @@ import { Header } from './Header';
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLogin = pathname === '/login';
+  const isLanding = pathname === '/';
+  const isBookLibrary = pathname === '/book-library' || pathname.startsWith('/book-library/');
 
-  if (isLogin) {
+  if (isLogin || isLanding || isBookLibrary) {
     return <>{children}</>;
   }
 

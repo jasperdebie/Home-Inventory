@@ -28,7 +28,7 @@ export default function LandingPage() {
             <span className="text-4xl">📚</span>
             <div>
               <h2 className="text-2xl font-semibold text-emerald-900">Book Library</h2>
-              <p className="text-sm text-emerald-700 mt-2">Open the placeholder page.</p>
+              <p className="text-sm text-emerald-700 mt-2">Manage your personal book collection with detailed stats.</p>
             </div>
           </Link>
         </div>

@@ -3,6 +3,9 @@
 -- Mijn Kookboek – recepten, ingrediënten, genormaliseerde producten
 -- ============================================================
 
+-- Vereiste extensie voor trigram-zoeken (gin_trgm_ops)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- cookbook_products: genormaliseerde productnamen voor autocomplete
 -- Zorgt ervoor dat "tomaat", "Tomaten" en "tomaten" hetzelfde product zijn.
 CREATE TABLE cookbook_products (

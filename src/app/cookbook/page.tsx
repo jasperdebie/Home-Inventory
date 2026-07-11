@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRecipes, RecipeFormData } from '@/lib/hooks/useRecipes';
 import { useToast } from '@/components/ui/Toast';
@@ -30,6 +30,35 @@ export default function CookbookPage() {
 
   // ─── Filter logic ────────────────────────────────────────────────────
 
+  // Aggregeer per recept alle ingrediënten, inclusief die van (geneste)
+  // subrecepten. Zo telt een subrecept automatisch mee in de productfilter.
+  const aggregatedIngredients = useMemo(() => {
+    const byId = new Map(recipes.map((r) => [r.id, r] as const));
+
+    function collect(id: string, visited: Set<string>, ids: Set<string>, norms: Set<string>) {
+      if (visited.has(id)) return;
+      visited.add(id);
+      const recipe = byId.get(id);
+      if (!recipe) return;
+      for (const ing of recipe.recipe_ingredients ?? []) {
+        if (ing.cookbook_product_id) ids.add(ing.cookbook_product_id);
+        norms.add(ing.cookbook_product?.name_normalized ?? ing.name.toLowerCase());
+      }
+      for (const comp of recipe.recipe_components ?? []) {
+        if (comp.child_recipe_id) collect(comp.child_recipe_id, visited, ids, norms);
+      }
+    }
+
+    const map = new Map<string, { ids: Set<string>; norms: Set<string> }>();
+    for (const r of recipes) {
+      const ids = new Set<string>();
+      const norms = new Set<string>();
+      collect(r.id, new Set<string>(), ids, norms);
+      map.set(r.id, { ids, norms });
+    }
+    return map;
+  }, [recipes]);
+
   const filtered = recipes.filter((recipe) => {
     if (selectedCategory && recipe.category !== selectedCategory) return false;
 
@@ -42,18 +71,10 @@ export default function CookbookPage() {
     }
 
     if (selectedProducts.length > 0) {
-      const recipeProductIds = new Set(
-        (recipe.recipe_ingredients ?? [])
-          .map((i) => i.cookbook_product_id)
-          .filter(Boolean)
-      );
-      const recipeProductNorms = new Set(
-        (recipe.recipe_ingredients ?? [])
-          .map((i) => i.cookbook_product?.name_normalized ?? i.name.toLowerCase())
-      );
+      const agg = aggregatedIngredients.get(recipe.id) ?? { ids: new Set<string>(), norms: new Set<string>() };
 
       const matches = (p: CookbookProduct) =>
-        recipeProductIds.has(p.id) || recipeProductNorms.has(p.name_normalized);
+        agg.ids.has(p.id) || agg.norms.has(p.name_normalized);
 
       if (productMode === 'AND') {
         if (!selectedProducts.every(matches)) return false;

@@ -137,6 +137,8 @@ export type Recipe = {
   is_favorite: boolean;
   is_made: boolean;
   rating: RecipeRating | null;
+  star_rating: number | null;
+  health_rating: number | null;
   created_at: string;
   updated_at: string;
   recipe_ingredients?: RecipeIngredient[];

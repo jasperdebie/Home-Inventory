@@ -378,6 +378,8 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
   const [isFavorite, setIsFavorite] = useState(false);
   const [isMade, setIsMade] = useState(false);
   const [rating, setRating] = useState<RecipeRating | ''>('');
+  const [starRating, setStarRating] = useState<number | null>(null);
+  const [healthRating, setHealthRating] = useState<number | null>(null);
   const [ingredients, setIngredients] = useState<IngredientInput[]>([emptyIngredient()]);
   const [equipment, setEquipment] = useState<EquipmentInput[]>([emptyEquipment()]);
   const [components, setComponents] = useState<ComponentInput[]>([]);
@@ -403,6 +405,8 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
       setIsFavorite(initial.is_favorite);
       setIsMade(initial.is_made);
       setRating(initial.rating ?? '');
+      setStarRating(initial.star_rating ?? null);
+      setHealthRating(initial.health_rating ?? null);
       const ings = (initial.recipe_ingredients ?? [])
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((i) => ({ name: i.name, cookbook_product_id: i.cookbook_product_id, quantity: i.quantity, unit: i.unit }));
@@ -423,6 +427,8 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
       setIsFavorite(false);
       setIsMade(false);
       setRating('');
+      setStarRating(null);
+      setHealthRating(null);
       setIngredients([emptyIngredient()]);
       setEquipment([emptyEquipment()]);
       setComponents([]);
@@ -503,6 +509,8 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
         is_favorite: isFavorite,
         is_made: isMade,
         rating: rating || null,
+        star_rating: starRating,
+        health_rating: healthRating,
         ingredients: validIngredients,
         equipment: validEquipment,
         components: validComponents,
@@ -829,6 +837,64 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
                   <span>{opt.emoji}</span> {opt.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Star rating (1-5) */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-2">Sterren</label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setStarRating((prev) => (prev === star ? null : star))}
+                  className="text-2xl leading-none transition-transform hover:scale-110 focus:outline-none"
+                  aria-label={`${star} ${star === 1 ? 'ster' : 'sterren'}`}
+                >
+                  <span className={starRating !== null && star <= starRating ? 'text-amber-400' : 'text-gray-300'}>
+                    ★
+                  </span>
+                </button>
+              ))}
+              {starRating !== null && (
+                <button
+                  type="button"
+                  onClick={() => setStarRating(null)}
+                  className="ml-2 text-xs text-[var(--cb-muted)] hover:text-[var(--cb-ink)] underline"
+                >
+                  Wissen
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Health rating (1-5 broccoli) */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-2">Gezond</label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setHealthRating((prev) => (prev === level ? null : level))}
+                  className="text-2xl leading-none transition-transform hover:scale-110 focus:outline-none"
+                  aria-label={`${level} van 5 gezond`}
+                >
+                  <span className={healthRating !== null && level <= healthRating ? '' : 'opacity-25 grayscale'}>
+                    🥦
+                  </span>
+                </button>
+              ))}
+              {healthRating !== null && (
+                <button
+                  type="button"
+                  onClick={() => setHealthRating(null)}
+                  className="ml-2 text-xs text-[var(--cb-muted)] hover:text-[var(--cb-ink)] underline"
+                >
+                  Wissen
+                </button>
+              )}
             </div>
           </div>
 

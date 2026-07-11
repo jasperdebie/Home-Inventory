@@ -5,6 +5,11 @@ const VALID_CATEGORIES = ['hapje', 'voorgerecht', 'hoofdgerecht', 'dessert'] as 
 
 const VALID_RATINGS = ['zeer_goed', 'goed', 'matig', 'minder', 'slecht'] as const;
 
+function isValidRating5(value: unknown): boolean {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 5;
+}
+
 const INGREDIENTS_QUERY = `
   *,
   recipe_ingredients (
@@ -89,7 +94,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, is_made, rating, ingredients, equipment, components } = body;
+  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, is_made, rating, star_rating, health_rating, ingredients, equipment, components } = body;
 
   if (title !== undefined && !title?.trim()) {
     return NextResponse.json({ error: 'Titel mag niet leeg zijn' }, { status: 400 });
@@ -99,6 +104,12 @@ export async function PATCH(
   }
   if (rating !== undefined && rating != null && rating !== '' && !VALID_RATINGS.includes(rating)) {
     return NextResponse.json({ error: 'Ongeldige beoordeling' }, { status: 400 });
+  }
+  if (star_rating !== undefined && star_rating != null && !isValidRating5(star_rating)) {
+    return NextResponse.json({ error: 'Ongeldige sterrenbeoordeling' }, { status: 400 });
+  }
+  if (health_rating !== undefined && health_rating != null && !isValidRating5(health_rating)) {
+    return NextResponse.json({ error: 'Ongeldige gezondheidsbeoordeling' }, { status: 400 });
   }
 
   const updateData: Record<string, unknown> = {};
@@ -116,6 +127,8 @@ export async function PATCH(
   if (is_favorite !== undefined) updateData.is_favorite = Boolean(is_favorite);
   if (is_made !== undefined)     updateData.is_made     = Boolean(is_made);
   if (rating !== undefined)      updateData.rating      = rating || null;
+  if (star_rating !== undefined)   updateData.star_rating   = star_rating != null ? Number(star_rating) : null;
+  if (health_rating !== undefined) updateData.health_rating = health_rating != null ? Number(health_rating) : null;
 
   const { error: updateError } = await supabase
     .from('recipes')

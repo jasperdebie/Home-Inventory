@@ -92,7 +92,7 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
         </div>
 
         {/* Made + rating */}
-        {(recipe.is_made || recipe.rating) && (
+        {(recipe.is_made || recipe.rating || recipe.star_rating || recipe.health_rating) && (
           <div className="flex flex-wrap gap-2 mt-3">
             {recipe.is_made && (
               <span className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
@@ -102,6 +102,30 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
             {recipe.rating && RATING_LABELS[recipe.rating] && (
               <span className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-white border border-[var(--cb-line)] text-[var(--cb-ink)] rounded-full font-medium">
                 {RATING_LABELS[recipe.rating].emoji} {RATING_LABELS[recipe.rating].label}
+              </span>
+            )}
+            {recipe.star_rating && (
+              <span
+                className="inline-flex items-center gap-0.5 text-sm px-3 py-1 bg-white border border-[var(--cb-line)] rounded-full font-medium"
+                title={`${recipe.star_rating}/5 sterren`}
+              >
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <span key={star} className={star <= recipe.star_rating! ? 'text-amber-400' : 'text-gray-300'}>
+                    ★
+                  </span>
+                ))}
+              </span>
+            )}
+            {recipe.health_rating && (
+              <span
+                className="inline-flex items-center gap-0.5 text-sm px-3 py-1 bg-white border border-[var(--cb-line)] rounded-full font-medium"
+                title={`${recipe.health_rating}/5 gezond`}
+              >
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <span key={level} className={level <= recipe.health_rating! ? '' : 'opacity-25 grayscale'}>
+                    🥦
+                  </span>
+                ))}
               </span>
             )}
           </div>

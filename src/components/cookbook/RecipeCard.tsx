@@ -78,6 +78,14 @@ export function RecipeCard({ recipe, onOpen, onEdit, onDelete, onToggleFavorite 
           {recipe.rating && RATING_EMOJI[recipe.rating] && (
             <span title="Beoordeling">{RATING_EMOJI[recipe.rating]}</span>
           )}
+          {recipe.star_rating && (
+            <span title={`${recipe.star_rating}/5 sterren`} className="text-amber-400">
+              ★ {recipe.star_rating}
+            </span>
+          )}
+          {recipe.health_rating && (
+            <span title={`${recipe.health_rating}/5 gezond`}>🥦 {recipe.health_rating}</span>
+          )}
         </div>
 
         {/* Tags */}

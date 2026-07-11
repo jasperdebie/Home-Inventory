@@ -12,10 +12,15 @@ interface GoogleBooksResponse {
   error?: { code: number };
 }
 
-interface OpenLibraryBook {
+interface OpenLibraryEdition {
   title?: string;
-  authors?: Array<{ name?: string }>;
-  subjects?: Array<string | { name?: string }>;
+  authors?: Array<{ key: string }>;
+  subjects?: string[];
+  works?: Array<{ key: string }>;
+}
+
+interface OpenLibraryAuthor {
+  name?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -47,23 +52,37 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2. Fallback: OpenLibrary /api/books (works for many English-language books)
+  // 2. Fallback: OpenLibrary /isbn/{isbn}.json
   try {
     const res = await fetch(
-      `https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(isbn)}&format=json&jscmd=data`,
+      `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`,
       { next: { revalidate: 86400 } }
     );
     if (res.ok) {
-      const data = (await res.json()) as Record<string, OpenLibraryBook>;
-      const book = data[`ISBN:${isbn}`];
-      if (book?.title) {
-        const subject = book.subjects?.[0];
-        const genre =
-          typeof subject === 'string' ? subject : (subject?.name ?? null);
+      const edition = (await res.json()) as OpenLibraryEdition;
+      if (edition?.title) {
+        // Author keys look like "/authors/OL34184A" — fetch the first one for the name
+        let authorName: string | null = null;
+        const firstAuthorKey = edition.authors?.[0]?.key;
+        if (firstAuthorKey) {
+          try {
+            const authorRes = await fetch(
+              `https://openlibrary.org${firstAuthorKey}.json`,
+              { next: { revalidate: 86400 } }
+            );
+            if (authorRes.ok) {
+              const authorData = (await authorRes.json()) as OpenLibraryAuthor;
+              authorName = authorData.name ?? null;
+            }
+          } catch {
+            // author fetch failed — leave null
+          }
+        }
+
         return NextResponse.json({
-          title: book.title ?? null,
-          author: book.authors?.[0]?.name ?? null,
-          genre,
+          title: edition.title,
+          author: authorName,
+          genre: edition.subjects?.[0] ?? null,
         });
       }
     }

@@ -352,6 +352,14 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
           </section>
         )}
 
+        {/* Storage / bewaaradvies */}
+        {recipe.storage && (
+          <section className="mt-4 p-4 bg-white rounded-2xl border border-[var(--cb-line)]">
+            <h2 className="text-sm font-semibold text-[var(--cb-muted)] mb-2">🧊 Bewaren</h2>
+            <FormattedNotes text={recipe.storage} />
+          </section>
+        )}
+
         {/* Source */}
         {recipe.source && (
           <section className="mt-4 p-4 bg-white rounded-2xl border border-[var(--cb-line)]">

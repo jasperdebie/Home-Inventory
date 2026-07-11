@@ -375,6 +375,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
   const [tags, setTags] = useState<string[]>([]);
   const [source, setSource] = useState('');
   const [notes, setNotes] = useState('');
+  const [storage, setStorage] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [isMade, setIsMade] = useState(false);
   const [rating, setRating] = useState<RecipeRating | ''>('');
@@ -402,6 +403,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
       setTagInput('');
       setSource(initial.source ?? '');
       setNotes(initial.notes ?? '');
+      setStorage(initial.storage ?? '');
       setIsFavorite(initial.is_favorite);
       setIsMade(initial.is_made);
       setRating(initial.rating ?? '');
@@ -423,7 +425,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
       setTitle(''); setCategory(''); setPreparation('');
       setServings(4); setPrepTime(''); setExtraTime(''); setExtraTimeLabel('');
       setImageUrl('');
-      setTags([]); setTagInput(''); setSource(''); setNotes('');
+      setTags([]); setTagInput(''); setSource(''); setNotes(''); setStorage('');
       setIsFavorite(false);
       setIsMade(false);
       setRating('');
@@ -506,6 +508,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
         tags,
         source: source.trim() || null,
         notes: notes.trim() || null,
+        storage: storage.trim() || null,
         is_favorite: isFavorite,
         is_made: isMade,
         rating: rating || null,
@@ -791,6 +794,18 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
               onChange={(e) => setNotes(e.target.value)}
               placeholder={'Persoonlijke opmerkingen…\n\nTip: begin een regel met "- " voor een bullet of "1. " voor een genummerde lijst. Lege regels maken aparte alinea\u2019s.'}
               rows={5}
+              className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)] resize-y"
+            />
+          </div>
+
+          {/* Storage / bewaaradvies */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-1.5">Bewaren</label>
+            <textarea
+              value={storage}
+              onChange={(e) => setStorage(e.target.value)}
+              placeholder={'Hoe bewaar je dit gerecht?\n\nbv. “Tot 3 dagen afgedekt in de koelkast” of “Invriezen kan tot 2 maanden”.'}
+              rows={4}
               className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)] resize-y"
             />
           </div>

@@ -134,6 +134,7 @@ export type Recipe = {
   tags: string[];
   source: string | null;
   notes: string | null;
+  storage: string | null;
   is_favorite: boolean;
   is_made: boolean;
   rating: RecipeRating | null;

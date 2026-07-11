@@ -94,7 +94,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, is_made, rating, star_rating, health_rating, ingredients, equipment, components } = body;
+  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, storage, is_favorite, is_made, rating, star_rating, health_rating, ingredients, equipment, components } = body;
 
   if (title !== undefined && !title?.trim()) {
     return NextResponse.json({ error: 'Titel mag niet leeg zijn' }, { status: 400 });
@@ -124,6 +124,7 @@ export async function PATCH(
   if (tags !== undefined)        updateData.tags        = Array.isArray(tags) ? tags : [];
   if (source !== undefined)      updateData.source      = source?.trim() || null;
   if (notes !== undefined)       updateData.notes       = notes?.trim() || null;
+  if (storage !== undefined)     updateData.storage     = storage?.trim() || null;
   if (is_favorite !== undefined) updateData.is_favorite = Boolean(is_favorite);
   if (is_made !== undefined)     updateData.is_made     = Boolean(is_made);
   if (rating !== undefined)      updateData.rating      = rating || null;

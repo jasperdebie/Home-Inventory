@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
 
-  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, is_made, rating, star_rating, health_rating, ingredients, equipment, components } = body;
+  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, storage, is_favorite, is_made, rating, star_rating, health_rating, ingredients, equipment, components } = body;
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Titel is verplicht' }, { status: 400 });
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       tags: Array.isArray(tags) ? tags : [],
       source: source?.trim() || null,
       notes: notes?.trim() || null,
+      storage: storage?.trim() || null,
       is_favorite: Boolean(is_favorite),
       is_made: Boolean(is_made),
       rating: rating || null,

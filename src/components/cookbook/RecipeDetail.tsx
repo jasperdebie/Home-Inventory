@@ -282,7 +282,7 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
         )}
 
         {/* Ingredients */}
-        {((recipe.recipe_ingredients?.length ?? 0) > 0 || (includeSubIngredients && hasSubIngredients)) && (
+        {((recipe.recipe_ingredients?.length ?? 0) > 0 || hasSubIngredients) && (
           <section className="mt-6">
             <div className="flex items-center justify-between gap-3 mb-3">
               <h2 className="text-base font-semibold text-[var(--cb-ink)]">Ingrediënten</h2>
@@ -317,7 +317,7 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
                   {scale !== 1 && ` Eigen ingrediënten aangepast voor ${servings} personen (origineel: ${recipe.servings} pers.); subrecepten op hun eigen basishoeveelheid.`}
                 </p>
               </>
-            ) : (
+            ) : (recipe.recipe_ingredients?.length ?? 0) > 0 ? (
               <>
                 <ul className="space-y-2">
                   {[...(recipe.recipe_ingredients ?? [])]
@@ -337,6 +337,10 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
                   </p>
                 )}
               </>
+            ) : (
+              <p className="text-sm text-[var(--cb-muted)] italic">
+                Dit gerecht bestaat uit subrecepten. Vink &lsquo;Subrecepten meetellen&rsquo; aan om de ingrediënten te tonen.
+              </p>
             )}
           </section>
         )}

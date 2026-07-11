@@ -9,7 +9,7 @@ export default function LandingPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 text-center">Choose your app</h1>
         <p className="text-center text-gray-600">Select where you want to continue.</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
             href="/home-inventory"
             className="group rounded-2xl border border-blue-200 bg-blue-50 p-8 min-h-48 flex flex-col justify-between transition-all hover:bg-blue-100 hover:border-blue-300"
@@ -29,6 +29,17 @@ export default function LandingPage() {
             <div>
               <h2 className="text-2xl font-semibold text-emerald-900">Book Library</h2>
               <p className="text-sm text-emerald-700 mt-2">Manage your personal book collection with detailed stats.</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/cookbook"
+            className="group rounded-2xl border border-orange-200 bg-orange-50 p-8 min-h-48 flex flex-col justify-between transition-all hover:bg-orange-100 hover:border-orange-300"
+          >
+            <span className="text-4xl">🍳</span>
+            <div>
+              <h2 className="text-2xl font-semibold text-orange-900">Mijn kookboek</h2>
+              <p className="text-sm text-orange-700 mt-2">Beheer je persoonlijke receptenverzameling.</p>
             </div>
           </Link>
         </div>

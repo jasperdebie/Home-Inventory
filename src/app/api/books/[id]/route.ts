@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
-  const id = params.id;
+  const { id } = await params;
 
   const { data, error } = await supabase
     .from('books')
@@ -23,13 +23,13 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
-  const id = params.id;
+  const { id } = await params;
   const body = await request.json();
 
-  const { title, author, genre, read, bought, lent, lent_to, notes } = body;
+  const { title, author, isbn, genre, read, bought, lent, lent_to, notes } = body;
 
   if (title !== undefined && !title?.trim()) {
     return NextResponse.json(
@@ -48,6 +48,7 @@ export async function PATCH(
   const updateData: any = {};
   if (title !== undefined) updateData.title = title.trim();
   if (author !== undefined) updateData.author = author.trim();
+  if (isbn !== undefined) updateData.isbn = isbn?.trim() || null;
   if (genre !== undefined) updateData.genre = genre?.trim() || null;
   if (read !== undefined) updateData.read = read;
   if (bought !== undefined) updateData.bought = bought;
@@ -71,10 +72,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
-  const id = params.id;
+  const { id } = await params;
 
   const { error } = await supabase
     .from('books')

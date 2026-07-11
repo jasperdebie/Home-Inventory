@@ -6,6 +6,7 @@ export interface Book {
   id: string;
   title: string;
   author: string;
+  isbn: string | null;
   genre: string | null;
   read: boolean;
   bought: boolean;

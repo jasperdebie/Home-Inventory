@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Book } from '@/lib/hooks/useBooks';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Dialog } from '@/components/ui/Dialog';
+import { Spinner } from '@/components/ui/Spinner';
+import { BarcodeScanner } from '@/components/scanner/BarcodeScanner';
+
+interface IsbnLookupResult {
+  title: string | null;
+  author: string | null;
+  genre: string | null;
+}
 
 interface BookFormProps {
   open: boolean;
@@ -25,6 +33,7 @@ export function BookForm({
 }: BookFormProps) {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
+  const [isbn, setIsbn] = useState('');
   const [genre, setGenre] = useState('');
   const [genreInputValue, setGenreInputValue] = useState('');
   const [showGenreDropdown, setShowGenreDropdown] = useState(false);
@@ -35,11 +44,15 @@ export function BookForm({
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isbnLoading, setIsbnLoading] = useState(false);
+  const [isbnError, setIsbnError] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     if (initialBook) {
       setTitle(initialBook.title);
       setAuthor(initialBook.author);
+      setIsbn(initialBook.isbn || '');
       setGenre(initialBook.genre || '');
       setGenreInputValue(initialBook.genre || '');
       setRead(initialBook.read);
@@ -51,11 +64,87 @@ export function BookForm({
       resetForm();
     }
     setError('');
+    setIsbnError('');
+    setScannerOpen(false);
   }, [initialBook, open]);
+
+  const normalizeIsbn = (value: string) => value.replace(/[^0-9Xx]/g, '').toUpperCase();
+
+  const isValidIsbnFormat = (value: string) => {
+    if (value.length === 13) {
+      return /^\d{13}$/.test(value);
+    }
+    if (value.length === 10) {
+      return /^\d{9}[\dX]$/.test(value);
+    }
+    return false;
+  };
+
+  const lookupByIsbn = useCallback(
+    async (rawIsbn?: string) => {
+      const normalized = normalizeIsbn(rawIsbn ?? isbn);
+      setIsbn(normalized);
+      setIsbnError('');
+
+      if (!isValidIsbnFormat(normalized)) {
+        setIsbnError('⚠️ Een ISBN heeft 10 of 13 cijfers.');
+        return;
+      }
+
+      setIsbnLoading(true);
+      try {
+        const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(normalized)}`);
+
+        if (res.status === 404) {
+          setIsbnError('⚠️ Geen boek gevonden voor dit ISBN. Vul de gegevens manueel in.');
+          return;
+        }
+        if (!res.ok) {
+          throw new Error('ISBN lookup failed');
+        }
+
+        const data = (await res.json()) as IsbnLookupResult;
+
+        if (!data.title) {
+          setIsbnError('⚠️ Geen boek gevonden voor dit ISBN. Vul de gegevens manueel in.');
+          return;
+        }
+
+        if (data.title) setTitle(data.title);
+        if (data.author) setAuthor(data.author);
+        if (data.genre) {
+          setGenre(data.genre);
+          setGenreInputValue(data.genre);
+
+          if (onAddGenre && !genres.includes(data.genre)) {
+            try {
+              await onAddGenre(data.genre);
+            } catch {
+              // Genre autocomplete update is best effort and should not block lookup.
+            }
+          }
+        }
+      } catch {
+        setIsbnError('⚠️ Kan geen verbinding maken. Controleer je internet.');
+      } finally {
+        setIsbnLoading(false);
+      }
+    },
+    [isbn, genres, onAddGenre]
+  );
+
+  const handleScan = useCallback(
+    async (scannedValue: string) => {
+      setScannerOpen(false);
+      await lookupByIsbn(scannedValue);
+    },
+    [lookupByIsbn]
+  );
 
   const resetForm = () => {
     setTitle('');
     setAuthor('');
+    setIsbn('');
     setGenre('');
     setGenreInputValue('');
     setRead(false);
@@ -87,7 +176,7 @@ export function BookForm({
         await onAddGenre?.(genreInputValue.trim());
         setGenre(genreInputValue.trim());
         setShowGenreDropdown(false);
-      } catch (err) {
+      } catch {
         setError('Failed to add genre');
       }
     }
@@ -109,6 +198,7 @@ export function BookForm({
       await onSubmit({
         title: title.trim(),
         author: author.trim(),
+        isbn: isbn.trim() || null,
         genre: finalGenre,
         read,
         bought,
@@ -140,13 +230,68 @@ export function BookForm({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2 rounded-lg border border-emerald-100 bg-emerald-50/40 p-3">
+            <div className="text-sm font-medium text-gray-700">ISBN (optioneel)</div>
+            <div className="flex gap-2 items-start">
+              <Input
+                value={isbn}
+                onChange={(e) => {
+                  setIsbn(e.target.value);
+                  setIsbnError('');
+                }}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    lookupByIsbn();
+                  }
+                }}
+                placeholder="bv. 9789023414797"
+              />
+              <Button type="button" onClick={() => lookupByIsbn()} disabled={isbnLoading}>
+                {isbnLoading ? 'Zoeken...' : 'Ophalen'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setScannerOpen((prev) => !prev);
+                  setIsbnError('');
+                }}
+              >
+                {scannerOpen ? 'Sluit scan' : 'Scan'}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Vul een ISBN in of scan de barcode om info automatisch op te halen.
+            </p>
+
+            {isbnLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Spinner size="sm" className="text-emerald-600" />
+                Boekinformatie ophalen...
+              </div>
+            )}
+
+            {isbnError && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {isbnError}
+              </div>
+            )}
+
+            {scannerOpen && (
+              <div className="rounded-lg border border-gray-200 bg-white p-2">
+                <BarcodeScanner onScan={handleScan} active={scannerOpen && open} />
+              </div>
+            )}
+          </div>
+
           <Input
             label="Title *"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., De aanslag"
             required
-            autoFocus
           />
 
           <Input
@@ -186,7 +331,7 @@ export function BookForm({
                           onClick={handleAddNewGenre}
                           className="w-full px-3 py-2 text-left text-sm text-emerald-600 hover:bg-emerald-50 font-medium border-t border-gray-200"
                         >
-                          + Add "{genreInputValue}"
+                          + Add &quot;{genreInputValue}&quot;
                         </button>
                       )}
                     </>
@@ -197,7 +342,7 @@ export function BookForm({
                       onClick={handleAddNewGenre}
                       className="w-full px-3 py-2 text-left text-sm text-emerald-600 hover:bg-emerald-50 font-medium"
                     >
-                      + Add "{genreInputValue}"
+                      + Add &quot;{genreInputValue}&quot;
                     </button>
                   )}
                 </div>

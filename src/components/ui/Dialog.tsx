@@ -27,7 +27,7 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="backdrop:bg-black/50 bg-white rounded-2xl shadow-xl p-0 w-[90vw] max-w-md"
+      className="m-auto backdrop:bg-black/50 bg-white rounded-2xl shadow-xl p-0 w-[90vw] max-w-md"
     >
       <div className="p-5">
         {title && <h2 className="text-lg font-semibold text-gray-900 mb-3">{title}</h2>}

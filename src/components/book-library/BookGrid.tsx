@@ -18,7 +18,8 @@ export function BookGrid({ books, filters, onEdit, onDelete }: BookGridProps) {
       const query = filters.search.toLowerCase();
       if (
         !book.title.toLowerCase().includes(query) &&
-        !book.author.toLowerCase().includes(query)
+        !book.author.toLowerCase().includes(query) &&
+        !book.isbn?.toLowerCase().includes(query)
       ) {
         return false;
       }

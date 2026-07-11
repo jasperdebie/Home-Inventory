@@ -21,6 +21,7 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900 line-clamp-2">{book.title}</h3>
           <p className="text-sm text-gray-600">{book.author}</p>
+          {book.isbn && <p className="text-xs text-gray-500 mt-1">ISBN: {book.isbn}</p>}
         </div>
         <div className="flex gap-1 shrink-0">
           <button

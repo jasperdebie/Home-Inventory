@@ -19,6 +19,72 @@ const RATING_LABELS: Record<string, { label: string; emoji: string }> = {
   slecht:    { label: 'Slecht',    emoji: '😖' },
 };
 
+/**
+ * Renders free-text notes while preserving the entered structure:
+ * - Blank lines separate blocks (paragraphs / lists)
+ * - Lines starting with -, *, • or "1." become bullet / numbered list items
+ * - Remaining line breaks are preserved within a paragraph
+ */
+function FormattedNotes({ text }: { text: string }) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const blocks: { type: 'ul' | 'ol' | 'p'; items: string[] }[] = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    const bulletMatch = line.match(/^\s*[-*•]\s+(.*)$/);
+    const numberMatch = line.match(/^\s*\d+[.)]\s+(.*)$/);
+
+    if (bulletMatch) {
+      const last = blocks[blocks.length - 1];
+      if (last && last.type === 'ul') last.items.push(bulletMatch[1]);
+      else blocks.push({ type: 'ul', items: [bulletMatch[1]] });
+    } else if (numberMatch) {
+      const last = blocks[blocks.length - 1];
+      if (last && last.type === 'ol') last.items.push(numberMatch[1]);
+      else blocks.push({ type: 'ol', items: [numberMatch[1]] });
+    } else if (line.trim() === '') {
+      // Blank line ends the current block
+      blocks.push({ type: 'p', items: [] });
+    } else {
+      const last = blocks[blocks.length - 1];
+      if (last && last.type === 'p' && last.items.length > 0) last.items.push(line);
+      else blocks.push({ type: 'p', items: [line] });
+    }
+  }
+
+  return (
+    <div className="space-y-2 text-sm text-[var(--cb-ink)] leading-relaxed">
+      {blocks.map((block, i) => {
+        if (block.items.length === 0) return null;
+        if (block.type === 'ul') {
+          return (
+            <ul key={i} className="list-disc pl-5 space-y-1">
+              {block.items.map((item, j) => <li key={j}>{item}</li>)}
+            </ul>
+          );
+        }
+        if (block.type === 'ol') {
+          return (
+            <ol key={i} className="list-decimal pl-5 space-y-1">
+              {block.items.map((item, j) => <li key={j}>{item}</li>)}
+            </ol>
+          );
+        }
+        return (
+          <p key={i}>
+            {block.items.map((item, j) => (
+              <span key={j}>
+                {item}
+                {j < block.items.length - 1 && <br />}
+              </span>
+            ))}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 interface RecipeDetailProps {
   recipe: Recipe;
   onClose: () => void;
@@ -282,7 +348,7 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
         {recipe.notes && (
           <section className="mt-6 p-4 bg-white rounded-2xl border border-[var(--cb-line)]">
             <h2 className="text-sm font-semibold text-[var(--cb-muted)] mb-2">📝 Notities</h2>
-            <p className="text-sm text-[var(--cb-ink)] leading-relaxed">{recipe.notes}</p>
+            <FormattedNotes text={recipe.notes} />
           </section>
         )}
 

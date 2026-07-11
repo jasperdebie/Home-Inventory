@@ -789,9 +789,9 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Persoonlijke opmerkingen…"
-              rows={3}
-              className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)] resize-none"
+              placeholder={'Persoonlijke opmerkingen…\n\nTip: begin een regel met "- " voor een bullet of "1. " voor een genummerde lijst. Lege regels maken aparte alinea\u2019s.'}
+              rows={5}
+              className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)] resize-y"
             />
           </div>
 

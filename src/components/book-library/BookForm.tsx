@@ -45,6 +45,7 @@ export function BookForm({
   const [lentTo, setLentTo] = useState('');
   const [condition, setCondition] = useState('');
   const [hardcover, setHardcover] = useState(false);
+  const [firstEdition, setFirstEdition] = useState(false);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +67,7 @@ export function BookForm({
       setLentTo(initialBook.lent_to || '');
       setCondition(initialBook.condition || '');
       setHardcover(initialBook.hardcover);
+      setFirstEdition(initialBook.first_edition);
       setNotes(initialBook.notes || '');
     } else {
       resetForm();
@@ -166,6 +168,7 @@ export function BookForm({
     setLentTo('');
     setCondition('');
     setHardcover(false);
+    setFirstEdition(false);
     setNotes('');
   };
 
@@ -222,6 +225,7 @@ export function BookForm({
         lent_to: (!wishlist && lent && lentTo.trim()) ? lentTo.trim() : null,
         condition: condition || null,
         hardcover,
+        first_edition: firstEdition,
         notes: notes.trim() || null,
       });
 
@@ -448,12 +452,22 @@ export function BookForm({
             <span className="text-sm font-medium text-gray-700">Hardcover</span>
           </label>
 
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={firstEdition}
+              onChange={(e) => setFirstEdition(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            <span className="text-sm font-medium text-gray-700">Eerste druk</span>
+          </label>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Opmerkingen</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes..."
+              placeholder="Bv. details over de staat van het boek..."
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />

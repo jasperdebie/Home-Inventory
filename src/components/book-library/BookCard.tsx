@@ -73,6 +73,11 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
             📕 Hardcover
           </span>
         )}
+        {book.first_edition && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full">
+            🥇 Eerste druk
+          </span>
+        )}
         {book.condition && (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
             {book.condition}

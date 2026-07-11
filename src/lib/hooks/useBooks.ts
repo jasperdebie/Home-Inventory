@@ -15,6 +15,7 @@ export interface Book {
   wishlist: boolean;
   condition: string | null;
   hardcover: boolean;
+  first_edition: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;

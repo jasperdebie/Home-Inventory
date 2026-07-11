@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Recipe, RecipeCategory } from '@/lib/supabase/types';
+import { useMemo, useState } from 'react';
+import { Recipe, RecipeCategory, RecipeIngredient } from '@/lib/supabase/types';
 import { CATEGORIES } from './CategoryFilter';
 
 const CATEGORY_EMOJI: Record<RecipeCategory, string> = {
@@ -9,14 +9,6 @@ const CATEGORY_EMOJI: Record<RecipeCategory, string> = {
   voorgerecht:  '🥗',
   hoofdgerecht: '🍽️',
   dessert:      '🍰',
-};
-
-const RATING_LABELS: Record<string, { label: string; emoji: string }> = {
-  zeer_goed: { label: 'Zeer goed', emoji: '😍' },
-  goed:      { label: 'Goed',      emoji: '🙂' },
-  matig:     { label: 'Matig',     emoji: '😐' },
-  minder:    { label: 'Minder',    emoji: '🙁' },
-  slecht:    { label: 'Slecht',    emoji: '😖' },
 };
 
 /**
@@ -91,19 +83,72 @@ interface RecipeDetailProps {
   onEdit: (recipe: Recipe) => void;
   onToggleFavorite: (id: string, value: boolean) => void;
   onOpenSubRecipe?: (id: string) => void;
+  /** Volledige receptenlijst, nodig om ingrediënten van subrecepten op te halen. */
+  allRecipes?: Recipe[];
 }
 
-export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpenSubRecipe }: RecipeDetailProps) {
+export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpenSubRecipe, allRecipes }: RecipeDetailProps) {
   const [servings, setServings] = useState(recipe.servings);
+  const [includeSubIngredients, setIncludeSubIngredients] = useState(false);
   const scale = servings / recipe.servings;
   const categoryLabel = CATEGORIES.find((c) => c.value === recipe.category)?.label ?? recipe.category;
 
+  function formatNumber(n: number): string {
+    // Show up to 2 decimal places, strip trailing zeros
+    return parseFloat(n.toFixed(2)).toString();
+  }
+
   function formatQty(qty: number | null): string {
     if (qty == null) return '';
-    const scaled = qty * scale;
-    // Show up to 2 decimal places, strip trailing zeros
-    return parseFloat(scaled.toFixed(2)).toString();
+    return formatNumber(qty * scale);
   }
+
+  // Geaggregeerde ingrediënten inclusief (geneste) subrecepten. De eigen
+  // ingrediënten van dit recept worden geschaald naar het gekozen aantal
+  // porties; ingrediënten van subrecepten blijven op hun eigen basishoeveelheid.
+  const { totalIngredients, hasSubIngredients } = useMemo(() => {
+    const byId = new Map((allRecipes ?? []).map((r) => [r.id, r] as const));
+    type Acc = { name: string; unit: string | null; quantity: number | null; unknownQty: boolean; order: number };
+    const merged = new Map<string, Acc>();
+    let order = 0;
+    let subCount = 0;
+
+    function addIngredient(ing: RecipeIngredient, mult: number, fromSub: boolean) {
+      if (fromSub) subCount++;
+      const nameKey = (ing.cookbook_product?.name_normalized ?? ing.name.trim().toLowerCase());
+      const key = `${nameKey}|${(ing.unit ?? '').trim().toLowerCase()}`;
+      const scaledQty = ing.quantity != null ? ing.quantity * mult : null;
+      const existing = merged.get(key);
+      if (existing) {
+        if (scaledQty == null) existing.unknownQty = true;
+        else existing.quantity = (existing.quantity ?? 0) + scaledQty;
+      } else {
+        merged.set(key, {
+          name: ing.name,
+          unit: ing.unit,
+          quantity: scaledQty,
+          unknownQty: scaledQty == null,
+          order: order++,
+        });
+      }
+    }
+
+    function collect(rec: Recipe | undefined, mult: number, fromSub: boolean, visited: Set<string>) {
+      if (!rec || visited.has(rec.id)) return;
+      visited.add(rec.id);
+      for (const ing of rec.recipe_ingredients ?? []) addIngredient(ing, mult, fromSub);
+      for (const comp of rec.recipe_components ?? []) {
+        const child = comp.child_recipe_id ? byId.get(comp.child_recipe_id) : undefined;
+        collect(child, 1, true, visited);
+      }
+    }
+
+    collect(recipe, scale, false, new Set<string>());
+    return {
+      totalIngredients: [...merged.values()].sort((a, b) => a.order - b.order),
+      hasSubIngredients: subCount > 0,
+    };
+  }, [recipe, allRecipes, scale]);
 
   return (
     <div className="fixed inset-0 z-50 bg-[var(--cb-bg)] overflow-y-auto">
@@ -158,16 +203,11 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
         </div>
 
         {/* Made + rating */}
-        {(recipe.is_made || recipe.rating || recipe.star_rating || recipe.health_rating) && (
+        {(recipe.is_made || recipe.star_rating || recipe.health_rating) && (
           <div className="flex flex-wrap gap-2 mt-3">
             {recipe.is_made && (
               <span className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
                 🍳 Al gemaakt
-              </span>
-            )}
-            {recipe.rating && RATING_LABELS[recipe.rating] && (
-              <span className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-white border border-[var(--cb-line)] text-[var(--cb-ink)] rounded-full font-medium">
-                {RATING_LABELS[recipe.rating].emoji} {RATING_LABELS[recipe.rating].label}
               </span>
             )}
             {recipe.star_rating && (
@@ -242,25 +282,61 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpen
         )}
 
         {/* Ingredients */}
-        {(recipe.recipe_ingredients?.length ?? 0) > 0 && (
+        {((recipe.recipe_ingredients?.length ?? 0) > 0 || (includeSubIngredients && hasSubIngredients)) && (
           <section className="mt-6">
-            <h2 className="text-base font-semibold text-[var(--cb-ink)] mb-3">Ingrediënten</h2>
-            <ul className="space-y-2">
-              {[...(recipe.recipe_ingredients ?? [])]
-                .sort((a, b) => a.sort_order - b.sort_order)
-                .map((ing) => (
-                  <li key={ing.id} className="flex items-center gap-3 py-2 border-b border-[var(--cb-line)] last:border-0">
-                    <span className="text-sm text-[var(--cb-muted)] w-16 shrink-0 text-right">
-                      {ing.quantity != null ? `${formatQty(ing.quantity)}${ing.unit ? ` ${ing.unit}` : ''}` : ing.unit ?? ''}
-                    </span>
-                    <span className="text-sm text-[var(--cb-ink)]">{ing.name}</span>
-                  </li>
-                ))}
-            </ul>
-            {scale !== 1 && (
-              <p className="mt-2 text-xs text-[var(--cb-muted)] italic">
-                Hoeveelheden aangepast voor {servings} personen (origineel: {recipe.servings} pers.)
-              </p>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-base font-semibold text-[var(--cb-ink)]">Ingrediënten</h2>
+              {hasSubIngredients && (
+                <label className="flex items-center gap-2 text-xs text-[var(--cb-muted)] cursor-pointer select-none shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={includeSubIngredients}
+                    onChange={(e) => setIncludeSubIngredients(e.target.checked)}
+                    className="w-4 h-4 accent-[var(--cb-accent)]"
+                  />
+                  Subrecepten meetellen
+                </label>
+              )}
+            </div>
+            {includeSubIngredients && hasSubIngredients ? (
+              <>
+                <ul className="space-y-2">
+                  {totalIngredients.map((ing, i) => (
+                    <li key={i} className="flex items-center gap-3 py-2 border-b border-[var(--cb-line)] last:border-0">
+                      <span className="text-sm text-[var(--cb-muted)] w-16 shrink-0 text-right">
+                        {ing.quantity != null
+                          ? `${ing.unknownQty ? '≈ ' : ''}${formatNumber(ing.quantity)}${ing.unit ? ` ${ing.unit}` : ''}`
+                          : ing.unit ?? ''}
+                      </span>
+                      <span className="text-sm text-[var(--cb-ink)]">{ing.name}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-[var(--cb-muted)] italic">
+                  Totaal inclusief subrecepten.
+                  {scale !== 1 && ` Eigen ingrediënten aangepast voor ${servings} personen (origineel: ${recipe.servings} pers.); subrecepten op hun eigen basishoeveelheid.`}
+                </p>
+              </>
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {[...(recipe.recipe_ingredients ?? [])]
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((ing) => (
+                      <li key={ing.id} className="flex items-center gap-3 py-2 border-b border-[var(--cb-line)] last:border-0">
+                        <span className="text-sm text-[var(--cb-muted)] w-16 shrink-0 text-right">
+                          {ing.quantity != null ? `${formatQty(ing.quantity)}${ing.unit ? ` ${ing.unit}` : ''}` : ing.unit ?? ''}
+                        </span>
+                        <span className="text-sm text-[var(--cb-ink)]">{ing.name}</span>
+                      </li>
+                    ))}
+                </ul>
+                {scale !== 1 && (
+                  <p className="mt-2 text-xs text-[var(--cb-muted)] italic">
+                    Hoeveelheden aangepast voor {servings} personen (origineel: {recipe.servings} pers.)
+                  </p>
+                )}
+              </>
             )}
           </section>
         )}

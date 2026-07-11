@@ -161,6 +161,7 @@ export default function CookbookPage() {
           onClose={() => setDetailRecipe(null)}
           onEdit={handleEdit}
           onToggleFavorite={handleToggleFavorite}
+          allRecipes={recipes}
           onOpenSubRecipe={(id) => {
             const target = recipes.find((r) => r.id === id);
             if (target) setDetailRecipe(target);

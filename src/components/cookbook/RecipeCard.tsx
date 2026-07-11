@@ -18,14 +18,6 @@ const CATEGORY_EMOJI: Record<RecipeCategory, string> = {
   dessert:      '🍰',
 };
 
-const RATING_EMOJI: Record<string, string> = {
-  zeer_goed: '😍',
-  goed:      '🙂',
-  matig:     '😐',
-  minder:    '🙁',
-  slecht:    '😖',
-};
-
 export function RecipeCard({ recipe, onOpen, onEdit, onDelete, onToggleFavorite }: RecipeCardProps) {
   const categoryLabel = CATEGORIES.find((c) => c.value === recipe.category)?.label ?? recipe.category;
 
@@ -75,9 +67,6 @@ export function RecipeCard({ recipe, onOpen, onEdit, onDelete, onToggleFavorite 
             <span title="Subrecepten">🧩 {recipe.recipe_components!.length}</span>
           )}
           {recipe.is_made && <span title="Al gemaakt">🍳</span>}
-          {recipe.rating && RATING_EMOJI[recipe.rating] && (
-            <span title="Beoordeling">{RATING_EMOJI[recipe.rating]}</span>
-          )}
           {recipe.star_rating && (
             <span title={`${recipe.star_rating}/5 sterren`} className="text-amber-400">
               ★ {recipe.star_rating}

@@ -1,19 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Recipe, RecipeCategory, RecipeRating, CookbookProduct, CookbookEquipment } from '@/lib/supabase/types';
+import { Recipe, RecipeCategory, CookbookProduct, CookbookEquipment } from '@/lib/supabase/types';
 import { IngredientInput, EquipmentInput, ComponentInput, RecipeFormData } from '@/lib/hooks/useRecipes';
 import { CATEGORIES } from './CategoryFilter';
 
 const UNITS = ['', 'g', 'kg', 'ml', 'l', 'el', 'kl', 'tl', 'stuk', 'stuks', 'snufje', 'naar smaak', 'bos', 'teen', 'plak', 'potje', 'blik', 'handvol'];
-
-const RATING_OPTIONS: { value: RecipeRating; label: string; emoji: string }[] = [
-  { value: 'zeer_goed', label: 'Zeer goed', emoji: '😍' },
-  { value: 'goed',      label: 'Goed',      emoji: '🙂' },
-  { value: 'matig',     label: 'Matig',     emoji: '😐' },
-  { value: 'minder',    label: 'Minder',    emoji: '🙁' },
-  { value: 'slecht',    label: 'Slecht',    emoji: '😖' },
-];
 
 // ─── Ingredient row with product autocomplete ─────────────────────────
 
@@ -378,7 +370,6 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
   const [storage, setStorage] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [isMade, setIsMade] = useState(false);
-  const [rating, setRating] = useState<RecipeRating | ''>('');
   const [starRating, setStarRating] = useState<number | null>(null);
   const [healthRating, setHealthRating] = useState<number | null>(null);
   const [ingredients, setIngredients] = useState<IngredientInput[]>([emptyIngredient()]);
@@ -406,7 +397,6 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
       setStorage(initial.storage ?? '');
       setIsFavorite(initial.is_favorite);
       setIsMade(initial.is_made);
-      setRating(initial.rating ?? '');
       setStarRating(initial.star_rating ?? null);
       setHealthRating(initial.health_rating ?? null);
       const ings = (initial.recipe_ingredients ?? [])
@@ -428,7 +418,6 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
       setTags([]); setTagInput(''); setSource(''); setNotes(''); setStorage('');
       setIsFavorite(false);
       setIsMade(false);
-      setRating('');
       setStarRating(null);
       setHealthRating(null);
       setIngredients([emptyIngredient()]);
@@ -511,7 +500,6 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
         storage: storage.trim() || null,
         is_favorite: isFavorite,
         is_made: isMade,
-        rating: rating || null,
         star_rating: starRating,
         health_rating: healthRating,
         ingredients: validIngredients,
@@ -833,27 +821,6 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
             </div>
             <span className="text-sm text-[var(--cb-ink)]">Al gemaakt 🍳</span>
           </label>
-
-          {/* Rating */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-2">Beoordeling</label>
-            <div className="flex flex-wrap gap-2">
-              {RATING_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setRating((prev) => (prev === opt.value ? '' : opt.value))}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors
-                    ${rating === opt.value
-                      ? 'bg-[var(--cb-accent)] text-white'
-                      : 'bg-[var(--cb-accent-soft)] text-[var(--cb-accent)]'
-                    }`}
-                >
-                  <span>{opt.emoji}</span> {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Star rating (1-5) */}
           <div>

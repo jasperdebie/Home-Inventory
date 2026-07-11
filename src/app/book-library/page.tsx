@@ -14,7 +14,7 @@ import { BookStatistics } from '@/components/book-library/BookStatistics';
 import { LentBooksTable } from '@/components/book-library/LentBooksTable';
 import { Book } from '@/lib/hooks/useBooks';
 
-type TabType = 'overview' | 'statistics' | 'lent';
+type TabType = 'overview' | 'wishlist' | 'statistics' | 'lent';
 
 export default function BookLibraryPage() {
   const { books, loading, createBook, updateBook, deleteBook } = useBooks();
@@ -76,6 +76,7 @@ export default function BookLibraryPage() {
   };
 
   const lentCount = books.filter((b) => b.lent).length;
+  const wishlistCount = books.filter((b) => b.wishlist).length;
 
   if (loading) {
     return (
@@ -104,7 +105,7 @@ export default function BookLibraryPage() {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">📚 Book Library</h1>
-                <p className="text-sm text-gray-600">{books.length} books in collection</p>
+                <p className="text-sm text-gray-600">{books.filter(b => !b.wishlist).length} boeken in collectie</p>
               </div>
             </div>
             <Button onClick={handleAddBook}>+ Add Book</Button>
@@ -115,6 +116,7 @@ export default function BookLibraryPage() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             lentCount={lentCount}
+            wishlistCount={wishlistCount}
           />
         </div>
 
@@ -132,6 +134,26 @@ export default function BookLibraryPage() {
                 filters={filters}
                 onEdit={handleEditBook}
                 onDelete={handleDeleteBook}
+              />
+            </div>
+          )}
+
+          {activeTab === 'wishlist' && (
+            <div className="space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-700">
+                ⭐ Boeken op je verlanglijst — nog niet gekocht, maar graag wil je ze lezen.
+              </div>
+              <BookFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                genres={genreNames}
+              />
+              <BookGrid
+                books={books}
+                filters={filters}
+                onEdit={handleEditBook}
+                onDelete={handleDeleteBook}
+                wishlistOnly
               />
             </div>
           )}

@@ -11,12 +11,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isLogin = pathname === '/login';
   const isLanding = pathname === '/';
   const isBookLibrary = pathname === '/book-library' || pathname.startsWith('/book-library/');
+  const isCookbook = pathname === '/cookbook' || pathname.startsWith('/cookbook/');
 
   if (isLogin || isLanding) {
     return <>{children}</>;
   }
 
-  if (isBookLibrary) {
+  if (isBookLibrary || isCookbook) {
     return <ToastProvider>{children}</ToastProvider>;
   }
 

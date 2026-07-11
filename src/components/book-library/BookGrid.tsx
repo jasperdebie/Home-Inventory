@@ -9,10 +9,19 @@ interface BookGridProps {
   filters: BookFiltersState;
   onEdit: (book: Book) => void;
   onDelete: (id: string) => void;
+  /** When true, only shows wishlist books and ignores bought/lent filters */
+  wishlistOnly?: boolean;
 }
 
-export function BookGrid({ books, filters, onEdit, onDelete }: BookGridProps) {
+export function BookGrid({ books, filters, onEdit, onDelete, wishlistOnly = false }: BookGridProps) {
   const filteredBooks = books.filter((book) => {
+    // Wishlist tab: only show wishlist books
+    if (wishlistOnly) {
+      if (!book.wishlist) return false;
+    } else {
+      // Overview tab: never show wishlist-only books
+      if (book.wishlist) return false;
+    }
     // Search filter
     if (filters.search) {
       const query = filters.search.toLowerCase();
@@ -31,16 +40,18 @@ export function BookGrid({ books, filters, onEdit, onDelete }: BookGridProps) {
     }
 
     // Read status filter
-    if (filters.readStatus === 'read' && !book.read) return false;
-    if (filters.readStatus === 'unread' && book.read) return false;
+    if (!wishlistOnly) {
+      if (filters.readStatus === 'read' && !book.read) return false;
+      if (filters.readStatus === 'unread' && book.read) return false;
 
-    // Lent status filter
-    if (filters.lentStatus === 'lent' && !book.lent) return false;
-    if (filters.lentStatus === 'available' && book.lent) return false;
+      // Lent status filter
+      if (filters.lentStatus === 'lent' && !book.lent) return false;
+      if (filters.lentStatus === 'available' && book.lent) return false;
 
-    // Bought status filter
-    if (filters.boughtStatus === 'bought' && !book.bought) return false;
-    if (filters.boughtStatus === 'notbought' && book.bought) return false;
+      // Bought status filter
+      if (filters.boughtStatus === 'bought' && !book.bought) return false;
+      if (filters.boughtStatus === 'notbought' && book.bought) return false;
+    }
 
     return true;
   });

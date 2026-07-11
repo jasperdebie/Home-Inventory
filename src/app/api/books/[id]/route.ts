@@ -29,7 +29,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const { title, author, isbn, genre, read, bought, lent, lent_to, notes } = body;
+  const { title, author, isbn, genre, read, bought, lent, lent_to, notes, wishlist } = body;
 
   if (title !== undefined && !title?.trim()) {
     return NextResponse.json(
@@ -55,6 +55,7 @@ export async function PATCH(
   if (lent !== undefined) updateData.lent = lent;
   if (lent_to !== undefined) updateData.lent_to = lent && lent_to?.trim() ? lent_to.trim() : null;
   if (notes !== undefined) updateData.notes = notes?.trim() || null;
+  if (wishlist !== undefined) updateData.wishlist = wishlist;
 
   const { data, error } = await supabase
     .from('books')

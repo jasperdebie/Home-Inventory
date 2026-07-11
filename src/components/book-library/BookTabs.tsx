@@ -1,12 +1,13 @@
 'use client';
 
 interface BookTabsProps {
-  activeTab: 'overview' | 'statistics' | 'lent';
-  onTabChange: (tab: 'overview' | 'statistics' | 'lent') => void;
+  activeTab: 'overview' | 'wishlist' | 'statistics' | 'lent';
+  onTabChange: (tab: 'overview' | 'wishlist' | 'statistics' | 'lent') => void;
   lentCount?: number;
+  wishlistCount?: number;
 }
 
-export function BookTabs({ activeTab, onTabChange, lentCount = 0 }: BookTabsProps) {
+export function BookTabs({ activeTab, onTabChange, lentCount = 0, wishlistCount = 0 }: BookTabsProps) {
   return (
     <div className="flex gap-1 border-b border-gray-200">
       <button
@@ -18,6 +19,16 @@ export function BookTabs({ activeTab, onTabChange, lentCount = 0 }: BookTabsProp
         }`}
       >
         📚 Overzicht
+      </button>
+      <button
+        onClick={() => onTabChange('wishlist')}
+        className={`px-4 py-3 font-medium text-sm transition-colors ${
+          activeTab === 'wishlist'
+            ? 'text-purple-700 border-b-2 border-purple-700'
+            : 'text-gray-600 hover:text-gray-900'
+        }`}
+      >
+        ⭐ Verlanglijst {wishlistCount > 0 && `(${wishlistCount})`}
       </button>
       <button
         onClick={() => onTabChange('statistics')}

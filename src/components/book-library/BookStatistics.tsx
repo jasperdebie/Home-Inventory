@@ -8,6 +8,7 @@ interface BookStatisticsProps {
 
 export function BookStatistics({ books }: BookStatisticsProps) {
   const totalBooks = books.length;
+  const wishlistBooks = books.filter((b) => b.wishlist).length;
   const readBooks = books.filter((b) => b.read).length;
   const boughtBooks = books.filter((b) => b.bought).length;
   const boughtAndRead = books.filter((b) => b.bought && b.read).length;
@@ -16,6 +17,12 @@ export function BookStatistics({ books }: BookStatisticsProps) {
   const lentBooks = books.filter((b) => b.lent).length;
 
   const stats = [
+    {
+      label: 'Op verlanglijst',
+      count: wishlistBooks,
+      total: totalBooks,
+      color: 'bg-purple-100 border-purple-300 text-purple-700',
+    },
     {
       label: 'Gelezen boeken',
       count: readBooks,

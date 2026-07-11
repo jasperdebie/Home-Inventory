@@ -48,6 +48,11 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
       )}
 
       <div className="flex flex-wrap gap-2 mb-3">
+        {book.wishlist && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+            ⭐ Verlanglijst
+          </span>
+        )}
         {book.read && (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
             ✓ Gelezen

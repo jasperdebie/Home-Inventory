@@ -12,6 +12,7 @@ export interface Book {
   bought: boolean;
   lent: boolean;
   lent_to: string | null;
+  wishlist: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;

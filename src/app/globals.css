@@ -50,3 +50,24 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Cookbook – Samsung One UI kleurenpalet (terracotta) */
+:root {
+  --cb-bg: #F7F5F1;
+  --cb-card: #FFFFFF;
+  --cb-ink: #2C2A26;
+  --cb-muted: #8A857C;
+  --cb-accent: #C0532E;
+  --cb-accent-soft: #F3E2DA;
+  --cb-line: #E7E2D9;
+  --cb-green: #3F7D54;
+}
+
+/* Bottom-sheet animatie */
+@keyframes sheet-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}

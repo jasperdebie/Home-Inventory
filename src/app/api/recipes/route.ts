@@ -1,0 +1,119 @@
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+const VALID_CATEGORIES = ['hapje', 'voorgerecht', 'hoofdgerecht', 'dessert'] as const;
+
+const INGREDIENTS_QUERY = `
+  *,
+  recipe_ingredients (
+    *,
+    cookbook_product:cookbook_products (*)
+  )
+` as const;
+
+async function upsertCookbookProduct(supabase: Awaited<ReturnType<typeof createClient>>, name: string) {
+  const normalized = name.trim().toLowerCase();
+  const { data: existing } = await supabase
+    .from('cookbook_products')
+    .select('id')
+    .eq('name_normalized', normalized)
+    .maybeSingle();
+
+  if (existing) return existing.id as string;
+
+  const { data: created } = await supabase
+    .from('cookbook_products')
+    .insert([{ name: name.trim(), name_normalized: normalized }])
+    .select('id')
+    .single();
+
+  return created?.id as string | null;
+}
+
+export async function GET() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('recipes')
+    .select(INGREDIENTS_QUERY)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const body = await request.json();
+
+  const { title, category, preparation, servings, prep_time, image_url, tags, source, notes, is_favorite, ingredients } = body;
+
+  if (!title?.trim()) {
+    return NextResponse.json({ error: 'Titel is verplicht' }, { status: 400 });
+  }
+  if (!VALID_CATEGORIES.includes(category)) {
+    return NextResponse.json({ error: 'Geldige categorie is verplicht' }, { status: 400 });
+  }
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .insert([{
+      title: title.trim(),
+      category,
+      preparation: preparation?.trim() ?? '',
+      servings: Number(servings) || 4,
+      prep_time: prep_time ? Number(prep_time) : null,
+      image_url: image_url?.trim() || null,
+      tags: Array.isArray(tags) ? tags : [],
+      source: source?.trim() || null,
+      notes: notes?.trim() || null,
+      is_favorite: Boolean(is_favorite),
+    }])
+    .select()
+    .single();
+
+  if (recipeError) {
+    return NextResponse.json({ error: recipeError.message }, { status: 500 });
+  }
+
+  if (Array.isArray(ingredients) && ingredients.length > 0) {
+    const rows = await Promise.all(
+      ingredients
+        .filter((ing: { name?: string }) => ing.name?.trim())
+        .map(async (ing: { name: string; cookbook_product_id?: string | null; quantity?: number | null; unit?: string | null }, index: number) => {
+          const productId = ing.cookbook_product_id
+            ?? await upsertCookbookProduct(supabase, ing.name);
+          return {
+            recipe_id: recipe.id,
+            cookbook_product_id: productId ?? null,
+            name: ing.name.trim(),
+            quantity: ing.quantity ?? null,
+            unit: ing.unit?.trim() || null,
+            sort_order: index,
+          };
+        })
+    );
+
+    if (rows.length > 0) {
+      const { error: ingError } = await supabase.from('recipe_ingredients').insert(rows);
+      if (ingError) {
+        return NextResponse.json({ error: ingError.message }, { status: 500 });
+      }
+    }
+  }
+
+  const { data: full, error: fullError } = await supabase
+    .from('recipes')
+    .select(INGREDIENTS_QUERY)
+    .eq('id', recipe.id)
+    .single();
+
+  if (fullError) {
+    return NextResponse.json({ error: fullError.message }, { status: 500 });
+  }
+
+  return NextResponse.json(full, { status: 201 });
+}

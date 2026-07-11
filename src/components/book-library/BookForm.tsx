@@ -12,6 +12,7 @@ interface IsbnLookupResult {
   title: string | null;
   author: string | null;
   genre: string | null;
+  hint?: string;
 }
 
 interface BookFormProps {
@@ -37,6 +38,7 @@ export function BookForm({
   const [genre, setGenre] = useState('');
   const [genreInputValue, setGenreInputValue] = useState('');
   const [showGenreDropdown, setShowGenreDropdown] = useState(false);
+  const [wishlist, setWishlist] = useState(false);
   const [read, setRead] = useState(false);
   const [bought, setBought] = useState(false);
   const [lent, setLent] = useState(false);
@@ -55,6 +57,7 @@ export function BookForm({
       setIsbn(initialBook.isbn || '');
       setGenre(initialBook.genre || '');
       setGenreInputValue(initialBook.genre || '');
+      setWishlist(initialBook.wishlist);
       setRead(initialBook.read);
       setBought(initialBook.bought);
       setLent(initialBook.lent);
@@ -96,7 +99,12 @@ export function BookForm({
         const res = await fetch(`/api/books/isbn?isbn=${encodeURIComponent(normalized)}`);
 
         if (res.status === 404) {
-          setIsbnError('⚠️ Geen boek gevonden voor dit ISBN. Vul de gegevens manueel in.');
+          const body = await res.json().catch(() => ({})) as IsbnLookupResult;
+          setIsbnError(
+            body.hint
+              ? `⚠️ Geen boek gevonden. ${body.hint}`
+              : '⚠️ Geen boek gevonden voor dit ISBN. Vul de gegevens manueel in.'
+          );
           return;
         }
         if (!res.ok) {
@@ -147,6 +155,7 @@ export function BookForm({
     setIsbn('');
     setGenre('');
     setGenreInputValue('');
+    setWishlist(false);
     setRead(false);
     setBought(false);
     setLent(false);
@@ -200,10 +209,11 @@ export function BookForm({
         author: author.trim(),
         isbn: isbn.trim() || null,
         genre: finalGenre,
-        read,
-        bought,
-        lent,
-        lent_to: lent && lentTo.trim() ? lentTo.trim() : null,
+        wishlist,
+        read: wishlist ? false : read,
+        bought: wishlist ? false : bought,
+        lent: wishlist ? false : lent,
+        lent_to: (!wishlist && lent && lentTo.trim()) ? lentTo.trim() : null,
         notes: notes.trim() || null,
       });
 
@@ -351,43 +361,57 @@ export function BookForm({
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 p-2 rounded-lg border border-purple-200 bg-purple-50">
               <input
                 type="checkbox"
-                checked={read}
-                onChange={(e) => setRead(e.target.checked)}
+                checked={wishlist}
+                onChange={(e) => setWishlist(e.target.checked)}
                 className="w-4 h-4 rounded border-gray-300"
               />
-              <span className="text-sm font-medium text-gray-700">Gelezen</span>
+              <span className="text-sm font-medium text-purple-700">⭐ Verlanglijst (nog niet gekocht, wil ik lezen)</span>
             </label>
 
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={bought}
-                onChange={(e) => setBought(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <span className="text-sm font-medium text-gray-700">Aangekocht</span>
-            </label>
+            {!wishlist && (
+              <>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={read}
+                    onChange={(e) => setRead(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Gelezen</span>
+                </label>
 
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={lent}
-                onChange={(e) => setLent(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
-              />
-              <span className="text-sm font-medium text-gray-700">Uitgeleend</span>
-            </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={bought}
+                    onChange={(e) => setBought(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Aangekocht</span>
+                </label>
 
-            {lent && (
-              <Input
-                label="Lent to"
-                value={lentTo}
-                onChange={(e) => setLentTo(e.target.value)}
-                placeholder="Name of person"
-              />
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={lent}
+                    onChange={(e) => setLent(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Uitgeleend</span>
+                </label>
+
+                {lent && (
+                  <Input
+                    label="Lent to"
+                    value={lentTo}
+                    onChange={(e) => setLentTo(e.target.value)}
+                    placeholder="Name of person"
+                  />
+                )}
+              </>
             )}
           </div>
 

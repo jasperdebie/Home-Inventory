@@ -18,9 +18,15 @@ export interface EquipmentInput {
   quantity?: number | null;
 }
 
-export interface RecipeFormData extends Omit<Recipe, 'id' | 'created_at' | 'updated_at' | 'recipe_ingredients' | 'recipe_equipment'> {
+export interface ComponentInput {
+  child_recipe_id: string;
+  label?: string | null;
+}
+
+export interface RecipeFormData extends Omit<Recipe, 'id' | 'created_at' | 'updated_at' | 'recipe_ingredients' | 'recipe_equipment' | 'recipe_components'> {
   ingredients: IngredientInput[];
   equipment: EquipmentInput[];
+  components: ComponentInput[];
 }
 
 export function useRecipes() {

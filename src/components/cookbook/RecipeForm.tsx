@@ -1,11 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Recipe, RecipeCategory, CookbookProduct, CookbookEquipment } from '@/lib/supabase/types';
-import { IngredientInput, EquipmentInput, RecipeFormData } from '@/lib/hooks/useRecipes';
+import { Recipe, RecipeCategory, RecipeRating, CookbookProduct, CookbookEquipment } from '@/lib/supabase/types';
+import { IngredientInput, EquipmentInput, ComponentInput, RecipeFormData } from '@/lib/hooks/useRecipes';
 import { CATEGORIES } from './CategoryFilter';
 
 const UNITS = ['', 'g', 'kg', 'ml', 'l', 'el', 'kl', 'tl', 'stuk', 'stuks', 'snufje', 'naar smaak', 'bos', 'teen', 'plak', 'potje', 'blik', 'handvol'];
+
+const RATING_OPTIONS: { value: RecipeRating; label: string; emoji: string }[] = [
+  { value: 'zeer_goed', label: 'Zeer goed', emoji: '😍' },
+  { value: 'goed',      label: 'Goed',      emoji: '🙂' },
+  { value: 'matig',     label: 'Matig',     emoji: '😐' },
+  { value: 'minder',    label: 'Minder',    emoji: '🙁' },
+  { value: 'slecht',    label: 'Slecht',    emoji: '😖' },
+];
 
 // ─── Ingredient row with product autocomplete ─────────────────────────
 
@@ -220,6 +228,118 @@ function EquipmentRow({ value, onChange, onRemove, canRemove }: EquipmentRowProp
   );
 }
 
+// ─── Sub-recipe row (verwijzing naar bestaand recept) ─────────────────
+
+const CATEGORY_EMOJI_MINI: Record<RecipeCategory, string> = {
+  hapje:        '🥨',
+  voorgerecht:  '🥗',
+  hoofdgerecht: '🍽️',
+  dessert:      '🍰',
+};
+
+interface SubRecipeRowProps {
+  value: ComponentInput;
+  options: Recipe[];
+  onChange: (value: ComponentInput) => void;
+  onRemove: () => void;
+}
+
+function SubRecipeRow({ value, options, onChange, onRemove }: SubRecipeRowProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const selected = options.find((r) => r.id === value.child_recipe_id) ?? null;
+  const filtered = search.trim()
+    ? options.filter((r) => r.title.toLowerCase().includes(search.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div className="flex flex-col gap-2 p-3 rounded-2xl border border-[var(--cb-line)] bg-[var(--cb-bg)]">
+      <div className="flex gap-2 items-start">
+        {/* Recipe picker */}
+        <div ref={wrapperRef} className="relative flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="w-full px-3 py-2 rounded-xl border border-[var(--cb-line)] text-sm text-left bg-white flex items-center justify-between gap-2 outline-none focus:border-[var(--cb-accent)]"
+          >
+            <span className={`truncate ${selected ? 'text-[var(--cb-ink)]' : 'text-[var(--cb-muted)]'}`}>
+              {selected ? `${CATEGORY_EMOJI_MINI[selected.category]} ${selected.title}` : 'Kies een recept…'}
+            </span>
+            <span className="text-[var(--cb-muted)] shrink-0">▾</span>
+          </button>
+          {open && (
+            <div className="absolute z-30 left-0 right-0 mt-1 bg-white rounded-xl border border-[var(--cb-line)] shadow-md overflow-hidden">
+              <div className="p-1.5 border-b border-[var(--cb-line)] sticky top-0 bg-white">
+                <input
+                  type="text"
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Zoek recept…"
+                  className="w-full px-2 py-1.5 rounded-lg border border-[var(--cb-line)] text-sm text-[var(--cb-ink)] bg-white outline-none focus:border-[var(--cb-accent)]"
+                />
+              </div>
+              <div className="max-h-44 overflow-y-auto">
+                {filtered.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-[var(--cb-muted)]">Geen recepten</div>
+                ) : (
+                  filtered.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        onChange({ ...value, child_recipe_id: r.id });
+                        setOpen(false);
+                        setSearch('');
+                      }}
+                      className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--cb-accent-soft)]
+                        ${r.id === value.child_recipe_id ? 'bg-[var(--cb-accent-soft)] text-[var(--cb-accent)] font-medium' : 'text-[var(--cb-ink)]'}`}
+                    >
+                      {CATEGORY_EMOJI_MINI[r.category]} {r.title}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Remove */}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="w-8 h-9 flex items-center justify-center text-[var(--cb-muted)] hover:text-red-500 shrink-0"
+          aria-label="Verwijder subrecept"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Optional label */}
+      <input
+        type="text"
+        value={value.label ?? ''}
+        onChange={(e) => onChange({ ...value, label: e.target.value || null })}
+        placeholder="Label (optioneel, bv. Voor de vulling)"
+        className="w-full px-3 py-2 rounded-xl border border-[var(--cb-line)] text-sm text-[var(--cb-ink)] bg-white placeholder:text-[var(--cb-muted)] outline-none focus:border-[var(--cb-accent)]"
+      />
+    </div>
+  );
+}
+
 // ─── RecipeForm ───────────────────────────────────────────────────────
 
 interface RecipeFormProps {
@@ -227,6 +347,7 @@ interface RecipeFormProps {
   onClose: () => void;
   onSubmit: (data: RecipeFormData) => Promise<void>;
   initial?: Recipe | null;
+  allRecipes?: Recipe[];
 }
 
 function emptyIngredient(): IngredientInput {
@@ -237,7 +358,11 @@ function emptyEquipment(): EquipmentInput {
   return { name: '', cookbook_equipment_id: null, quantity: null };
 }
 
-export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps) {
+function emptyComponent(): ComponentInput {
+  return { child_recipe_id: '', label: null };
+}
+
+export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }: RecipeFormProps) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory | ''>('');
   const [preparation, setPreparation] = useState('');
@@ -251,8 +376,11 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
   const [source, setSource] = useState('');
   const [notes, setNotes] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isMade, setIsMade] = useState(false);
+  const [rating, setRating] = useState<RecipeRating | ''>('');
   const [ingredients, setIngredients] = useState<IngredientInput[]>([emptyIngredient()]);
   const [equipment, setEquipment] = useState<EquipmentInput[]>([emptyEquipment()]);
+  const [components, setComponents] = useState<ComponentInput[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -273,6 +401,8 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
       setSource(initial.source ?? '');
       setNotes(initial.notes ?? '');
       setIsFavorite(initial.is_favorite);
+      setIsMade(initial.is_made);
+      setRating(initial.rating ?? '');
       const ings = (initial.recipe_ingredients ?? [])
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((i) => ({ name: i.name, cookbook_product_id: i.cookbook_product_id, quantity: i.quantity, unit: i.unit }));
@@ -281,14 +411,21 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((e) => ({ name: e.name, cookbook_equipment_id: e.cookbook_equipment_id, quantity: e.quantity }));
       setEquipment(eqs.length ? eqs : [emptyEquipment()]);
+      const comps = (initial.recipe_components ?? [])
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((c) => ({ child_recipe_id: c.child_recipe_id, label: c.label }));
+      setComponents(comps);
     } else {
       setTitle(''); setCategory(''); setPreparation('');
       setServings(4); setPrepTime(''); setExtraTime(''); setExtraTimeLabel('');
       setImageUrl('');
       setTags([]); setTagInput(''); setSource(''); setNotes('');
       setIsFavorite(false);
+      setIsMade(false);
+      setRating('');
       setIngredients([emptyIngredient()]);
       setEquipment([emptyEquipment()]);
+      setComponents([]);
     }
     setError('');
   }, [open, initial]);
@@ -326,6 +463,18 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
     setEquipment((prev) => [...prev, emptyEquipment()]);
   };
 
+  const updateComponent = (index: number, value: ComponentInput) => {
+    setComponents((prev) => prev.map((c, i) => (i === index ? value : c)));
+  };
+
+  const removeComponent = (index: number) => {
+    setComponents((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addComponent = () => {
+    setComponents((prev) => [...prev, emptyComponent()]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -335,6 +484,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
 
     const validIngredients = ingredients.filter((i) => i.name.trim());
     const validEquipment = equipment.filter((e) => e.name.trim());
+    const validComponents = components.filter((c) => c.child_recipe_id);
 
     setSaving(true);
     try {
@@ -351,8 +501,11 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
         source: source.trim() || null,
         notes: notes.trim() || null,
         is_favorite: isFavorite,
+        is_made: isMade,
+        rating: rating || null,
         ingredients: validIngredients,
         equipment: validEquipment,
+        components: validComponents,
       });
       onClose();
     } catch (err) {
@@ -476,6 +629,34 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
               className="mt-2 text-sm text-[var(--cb-accent)] font-medium flex items-center gap-1 hover:opacity-75"
             >
               + Benodigdheid toevoegen
+            </button>
+          </div>
+
+          {/* Sub-recipes / subrecepten */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-1">Subrecepten</label>
+            <p className="text-xs text-[var(--cb-muted)] mb-2">
+              Verwijs naar een ander recept, bv. soezen of banketbakkersroom.
+            </p>
+            {components.length > 0 && (
+              <div className="space-y-2">
+                {components.map((comp, i) => (
+                  <SubRecipeRow
+                    key={i}
+                    value={comp}
+                    options={allRecipes.filter((r) => r.id !== initial?.id)}
+                    onChange={(v) => updateComponent(i, v)}
+                    onRemove={() => removeComponent(i)}
+                  />
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={addComponent}
+              className="mt-2 text-sm text-[var(--cb-accent)] font-medium flex items-center gap-1 hover:opacity-75"
+            >
+              + Subrecept toevoegen
             </button>
           </div>
 
@@ -617,6 +798,39 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
             </div>
             <span className="text-sm text-[var(--cb-ink)]">Favoriet ♥</span>
           </label>
+
+          {/* Made toggle */}
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              onClick={() => setIsMade((v) => !v)}
+              className={`w-12 h-7 rounded-full transition-colors flex items-center px-1
+                ${isMade ? 'bg-[var(--cb-accent)]' : 'bg-[var(--cb-line)]'}`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isMade ? 'translate-x-5' : ''}`} />
+            </div>
+            <span className="text-sm text-[var(--cb-ink)]">Al gemaakt 🍳</span>
+          </label>
+
+          {/* Rating */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-2">Beoordeling</label>
+            <div className="flex flex-wrap gap-2">
+              {RATING_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRating((prev) => (prev === opt.value ? '' : opt.value))}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors
+                    ${rating === opt.value
+                      ? 'bg-[var(--cb-accent)] text-white'
+                      : 'bg-[var(--cb-accent-soft)] text-[var(--cb-accent)]'
+                    }`}
+                >
+                  <span>{opt.emoji}</span> {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Spacer for submit button */}
           <div className="h-2" />

@@ -99,6 +99,28 @@ export type RecipeEquipment = {
 
 export type RecipeCategory = 'hapje' | 'voorgerecht' | 'hoofdgerecht' | 'dessert';
 
+export type RecipeRating = 'zeer_goed' | 'goed' | 'matig' | 'minder' | 'slecht';
+
+// Beknopte info van een gekoppeld (sub)recept
+export type RecipeComponentChild = {
+  id: string;
+  title: string;
+  category: RecipeCategory;
+  servings: number;
+  prep_time: number | null;
+  image_url: string | null;
+};
+
+export type RecipeComponent = {
+  id: string;
+  recipe_id: string;
+  child_recipe_id: string;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
+  child_recipe?: RecipeComponentChild | null;
+};
+
 export type Recipe = {
   id: string;
   title: string;
@@ -113,8 +135,11 @@ export type Recipe = {
   source: string | null;
   notes: string | null;
   is_favorite: boolean;
+  is_made: boolean;
+  rating: RecipeRating | null;
   created_at: string;
   updated_at: string;
   recipe_ingredients?: RecipeIngredient[];
   recipe_equipment?: RecipeEquipment[];
+  recipe_components?: RecipeComponent[];
 };

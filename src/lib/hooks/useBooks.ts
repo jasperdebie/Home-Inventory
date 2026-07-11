@@ -16,6 +16,7 @@ export interface Book {
   condition: string | null;
   hardcover: boolean;
   first_edition: boolean;
+  rating: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

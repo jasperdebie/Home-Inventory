@@ -46,6 +46,7 @@ export function BookForm({
   const [condition, setCondition] = useState('');
   const [hardcover, setHardcover] = useState(false);
   const [firstEdition, setFirstEdition] = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -68,6 +69,7 @@ export function BookForm({
       setCondition(initialBook.condition || '');
       setHardcover(initialBook.hardcover);
       setFirstEdition(initialBook.first_edition);
+      setRating(initialBook.rating);
       setNotes(initialBook.notes || '');
     } else {
       resetForm();
@@ -169,6 +171,7 @@ export function BookForm({
     setCondition('');
     setHardcover(false);
     setFirstEdition(false);
+    setRating(null);
     setNotes('');
   };
 
@@ -226,6 +229,7 @@ export function BookForm({
         condition: condition || null,
         hardcover,
         first_edition: firstEdition,
+        rating,
         notes: notes.trim() || null,
       });
 
@@ -461,6 +465,34 @@ export function BookForm({
             />
             <span className="text-sm font-medium text-gray-700">Eerste druk</span>
           </label>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Beoordeling</label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(rating === star ? null : star)}
+                  className="text-2xl leading-none transition-transform hover:scale-110 focus:outline-none"
+                  aria-label={`${star} ${star === 1 ? 'ster' : 'sterren'}`}
+                >
+                  <span className={rating !== null && star <= rating ? 'text-amber-400' : 'text-gray-300'}>
+                    ★
+                  </span>
+                </button>
+              ))}
+              {rating !== null && (
+                <button
+                  type="button"
+                  onClick={() => setRating(null)}
+                  className="ml-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Wissen
+                </button>
+              )}
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Opmerkingen</label>

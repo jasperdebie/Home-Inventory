@@ -140,6 +140,10 @@ export default function CookbookPage() {
           onClose={() => setDetailRecipe(null)}
           onEdit={handleEdit}
           onToggleFavorite={handleToggleFavorite}
+          onOpenSubRecipe={(id) => {
+            const target = recipes.find((r) => r.id === id);
+            if (target) setDetailRecipe(target);
+          }}
         />
       )}
 
@@ -149,6 +153,7 @@ export default function CookbookPage() {
         onClose={() => setFormOpen(false)}
         onSubmit={handleFormSubmit}
         initial={editingRecipe}
+        allRecipes={recipes}
       />
 
       <div className="max-w-4xl mx-auto">

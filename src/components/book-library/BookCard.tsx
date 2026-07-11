@@ -47,6 +47,19 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
         </p>
       )}
 
+      {book.rating !== null && (
+        <div className="flex items-center gap-0.5 mb-3" title={`${book.rating}/5`}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <span
+              key={star}
+              className={star <= book.rating! ? 'text-amber-400' : 'text-gray-300'}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-3">
         {book.wishlist && (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">

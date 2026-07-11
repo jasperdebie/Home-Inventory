@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const VALID_CATEGORIES = ['hapje', 'voorgerecht', 'hoofdgerecht', 'dessert'] as const;
 
+const VALID_RATINGS = ['zeer_goed', 'goed', 'matig', 'minder', 'slecht'] as const;
+
 const INGREDIENTS_QUERY = `
   *,
   recipe_ingredients (
@@ -12,6 +14,12 @@ const INGREDIENTS_QUERY = `
   recipe_equipment (
     *,
     cookbook_equipment:cookbook_equipment (*)
+  ),
+  recipe_components!fk_recipe_components_parent (
+    *,
+    child_recipe:recipes!fk_recipe_components_child (
+      id, title, category, servings, prep_time, image_url
+    )
   )
 ` as const;
 
@@ -72,13 +80,16 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
 
-  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, ingredients, equipment } = body;
+  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, is_made, rating, ingredients, equipment, components } = body;
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Titel is verplicht' }, { status: 400 });
   }
   if (!VALID_CATEGORIES.includes(category)) {
     return NextResponse.json({ error: 'Geldige categorie is verplicht' }, { status: 400 });
+  }
+  if (rating != null && rating !== '' && !VALID_RATINGS.includes(rating)) {
+    return NextResponse.json({ error: 'Ongeldige beoordeling' }, { status: 400 });
   }
 
   const { data: recipe, error: recipeError } = await supabase
@@ -96,6 +107,8 @@ export async function POST(request: NextRequest) {
       source: source?.trim() || null,
       notes: notes?.trim() || null,
       is_favorite: Boolean(is_favorite),
+      is_made: Boolean(is_made),
+      rating: rating || null,
     }])
     .select()
     .single();
@@ -151,6 +164,24 @@ export async function POST(request: NextRequest) {
       const { error: eqError } = await supabase.from('recipe_equipment').insert(rows);
       if (eqError) {
         return NextResponse.json({ error: eqError.message }, { status: 500 });
+      }
+    }
+  }
+
+  if (Array.isArray(components) && components.length > 0) {
+    const rows = components
+      .filter((c: { child_recipe_id?: string }) => c.child_recipe_id)
+      .map((c: { child_recipe_id: string; label?: string | null }, index: number) => ({
+        recipe_id: recipe.id,
+        child_recipe_id: c.child_recipe_id,
+        label: c.label?.trim() || null,
+        sort_order: index,
+      }));
+
+    if (rows.length > 0) {
+      const { error: compError } = await supabase.from('recipe_components').insert(rows);
+      if (compError) {
+        return NextResponse.json({ error: compError.message }, { status: 500 });
       }
     }
   }

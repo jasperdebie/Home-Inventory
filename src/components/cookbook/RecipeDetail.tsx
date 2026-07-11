@@ -11,14 +11,23 @@ const CATEGORY_EMOJI: Record<RecipeCategory, string> = {
   dessert:      '🍰',
 };
 
+const RATING_LABELS: Record<string, { label: string; emoji: string }> = {
+  zeer_goed: { label: 'Zeer goed', emoji: '😍' },
+  goed:      { label: 'Goed',      emoji: '🙂' },
+  matig:     { label: 'Matig',     emoji: '😐' },
+  minder:    { label: 'Minder',    emoji: '🙁' },
+  slecht:    { label: 'Slecht',    emoji: '😖' },
+};
+
 interface RecipeDetailProps {
   recipe: Recipe;
   onClose: () => void;
   onEdit: (recipe: Recipe) => void;
   onToggleFavorite: (id: string, value: boolean) => void;
+  onOpenSubRecipe?: (id: string) => void;
 }
 
-export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite }: RecipeDetailProps) {
+export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite, onOpenSubRecipe }: RecipeDetailProps) {
   const [servings, setServings] = useState(recipe.servings);
   const scale = servings / recipe.servings;
   const categoryLabel = CATEGORIES.find((c) => c.value === recipe.category)?.label ?? recipe.category;
@@ -81,6 +90,22 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite }: Reci
           </span>
           <h1 className="text-2xl font-bold text-[var(--cb-ink)] leading-tight">{recipe.title}</h1>
         </div>
+
+        {/* Made + rating */}
+        {(recipe.is_made || recipe.rating) && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {recipe.is_made && (
+              <span className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
+                🍳 Al gemaakt
+              </span>
+            )}
+            {recipe.rating && RATING_LABELS[recipe.rating] && (
+              <span className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-white border border-[var(--cb-line)] text-[var(--cb-ink)] rounded-full font-medium">
+                {RATING_LABELS[recipe.rating].emoji} {RATING_LABELS[recipe.rating].label}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Meta row */}
         <div className="flex flex-wrap gap-4 mt-4 text-sm text-[var(--cb-muted)]">
@@ -166,6 +191,49 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite }: Reci
                   </li>
                 ))}
             </ul>
+          </section>
+        )}
+
+        {/* Sub-recipes / subrecepten */}
+        {(recipe.recipe_components?.length ?? 0) > 0 && (
+          <section className="mt-6">
+            <h2 className="text-base font-semibold text-[var(--cb-ink)] mb-3">Subrecepten</h2>
+            <div className="space-y-2">
+              {[...(recipe.recipe_components ?? [])]
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((comp) => {
+                  const child = comp.child_recipe;
+                  const clickable = Boolean(child && onOpenSubRecipe);
+                  return (
+                    <button
+                      key={comp.id}
+                      type="button"
+                      disabled={!clickable}
+                      onClick={() => child && onOpenSubRecipe?.(child.id)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-2xl border border-[var(--cb-line)] bg-white text-left transition-colors
+                        ${clickable ? 'hover:border-[var(--cb-accent)] active:scale-[0.99]' : 'opacity-70'}`}
+                    >
+                      <span className="w-11 h-11 rounded-xl bg-[var(--cb-accent-soft)] flex items-center justify-center text-xl shrink-0 overflow-hidden">
+                        {child?.image_url
+                          ? <img src={child.image_url} alt={child.title} className="w-full h-full object-cover" />
+                          : (child ? CATEGORY_EMOJI[child.category] : '🍽️')}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        {comp.label && (
+                          <span className="block text-xs text-[var(--cb-muted)]">{comp.label}</span>
+                        )}
+                        <span className="block text-sm font-medium text-[var(--cb-ink)] truncate">
+                          {child?.title ?? 'Onbekend recept'}
+                        </span>
+                        {child?.prep_time != null && (
+                          <span className="block text-xs text-[var(--cb-muted)]">⏱ {child.prep_time} min</span>
+                        )}
+                      </span>
+                      {clickable && <span className="text-[var(--cb-muted)] shrink-0">›</span>}
+                    </button>
+                  );
+                })}
+            </div>
           </section>
         )}
 

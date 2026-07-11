@@ -79,6 +79,24 @@ export type RecipeIngredient = {
   cookbook_product?: CookbookProduct | null;
 };
 
+export type CookbookEquipment = {
+  id: string;
+  name: string;
+  name_normalized: string;
+  created_at: string;
+};
+
+export type RecipeEquipment = {
+  id: string;
+  recipe_id: string;
+  cookbook_equipment_id: string | null;
+  name: string;
+  quantity: number | null;
+  sort_order: number;
+  created_at: string;
+  cookbook_equipment?: CookbookEquipment | null;
+};
+
 export type RecipeCategory = 'hapje' | 'voorgerecht' | 'hoofdgerecht' | 'dessert';
 
 export type Recipe = {
@@ -88,6 +106,8 @@ export type Recipe = {
   preparation: string;
   servings: number;
   prep_time: number | null;
+  extra_time: string | null;
+  extra_time_label: string | null;
   image_url: string | null;
   tags: string[];
   source: string | null;
@@ -96,4 +116,5 @@ export type Recipe = {
   created_at: string;
   updated_at: string;
   recipe_ingredients?: RecipeIngredient[];
+  recipe_equipment?: RecipeEquipment[];
 };

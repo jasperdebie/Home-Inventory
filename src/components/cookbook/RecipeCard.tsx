@@ -56,6 +56,9 @@ export function RecipeCard({ recipe, onOpen, onEdit, onDelete, onToggleFavorite 
           {recipe.prep_time && (
             <span>⏱ {recipe.prep_time} min</span>
           )}
+          {recipe.extra_time && (
+            <span>⏳ {recipe.extra_time}{recipe.extra_time_label ? ` ${recipe.extra_time_label}` : ''}</span>
+          )}
           <span>👤 {recipe.servings} pers.</span>
           {(recipe.recipe_ingredients?.length ?? 0) > 0 && (
             <span>🥕 {recipe.recipe_ingredients!.length} ing.</span>

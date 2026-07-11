@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Recipe, RecipeCategory, CookbookProduct } from '@/lib/supabase/types';
-import { IngredientInput, RecipeFormData } from '@/lib/hooks/useRecipes';
+import { Recipe, RecipeCategory, CookbookProduct, CookbookEquipment } from '@/lib/supabase/types';
+import { IngredientInput, EquipmentInput, RecipeFormData } from '@/lib/hooks/useRecipes';
 import { CATEGORIES } from './CategoryFilter';
 
 const UNITS = ['', 'g', 'kg', 'ml', 'l', 'el', 'kl', 'tl', 'stuk', 'stuks', 'snufje', 'naar smaak', 'bos', 'teen', 'plak', 'potje', 'blik', 'handvol'];
@@ -119,6 +119,107 @@ function IngredientRow({ value, onChange, onRemove, canRemove }: IngredientRowPr
   );
 }
 
+// ─── Equipment row with autocomplete ──────────────────────────────────
+
+interface EquipmentRowProps {
+  value: EquipmentInput;
+  onChange: (value: EquipmentInput) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}
+
+function EquipmentRow({ value, onChange, onRemove, canRemove }: EquipmentRowProps) {
+  const [suggestions, setSuggestions] = useState<CookbookEquipment[]>([]);
+  const [open, setOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handleNameChange = (name: string) => {
+    onChange({ ...value, name, cookbook_equipment_id: null });
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!name.trim()) { setSuggestions([]); setOpen(false); return; }
+
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/cookbook-equipment?q=${encodeURIComponent(name)}`);
+        if (!res.ok) return;
+        const data: CookbookEquipment[] = await res.json();
+        setSuggestions(data);
+        setOpen(data.length > 0);
+      } catch { /* ignore */ }
+    }, 200);
+  };
+
+  const handleSelect = (item: CookbookEquipment) => {
+    onChange({ ...value, name: item.name, cookbook_equipment_id: item.id });
+    setSuggestions([]);
+    setOpen(false);
+  };
+
+  return (
+    <div className="flex gap-2 items-start">
+      {/* Equipment name with autocomplete */}
+      <div ref={wrapperRef} className="relative flex-1 min-w-0">
+        <input
+          type="text"
+          value={value.name}
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="bv. mixer, spuitzak"
+          className="w-full px-3 py-2 rounded-xl border border-[var(--cb-line)] text-sm text-[var(--cb-ink)] bg-white placeholder:text-[var(--cb-muted)] outline-none focus:border-[var(--cb-accent)]"
+        />
+        {open && suggestions.length > 0 && (
+          <div className="absolute z-30 left-0 right-0 mt-1 bg-white rounded-xl border border-[var(--cb-line)] shadow-md overflow-hidden max-h-40 overflow-y-auto">
+            {suggestions.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(p); }}
+                className="w-full px-3 py-2 text-sm text-left text-[var(--cb-ink)] hover:bg-[var(--cb-accent-soft)]"
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Quantity */}
+      <input
+        type="number"
+        min="0"
+        step="any"
+        value={value.quantity ?? ''}
+        onChange={(e) => onChange({ ...value, quantity: e.target.value ? Number(e.target.value) : null })}
+        placeholder="Aantal"
+        className="w-20 px-2 py-2 rounded-xl border border-[var(--cb-line)] text-sm text-[var(--cb-ink)] bg-white outline-none focus:border-[var(--cb-accent)] shrink-0"
+      />
+
+      {/* Remove */}
+      {canRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="w-8 h-9 flex items-center justify-center text-[var(--cb-muted)] hover:text-red-500 shrink-0"
+          aria-label="Verwijder benodigdheid"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── RecipeForm ───────────────────────────────────────────────────────
 
 interface RecipeFormProps {
@@ -132,12 +233,18 @@ function emptyIngredient(): IngredientInput {
   return { name: '', cookbook_product_id: null, quantity: null, unit: null };
 }
 
+function emptyEquipment(): EquipmentInput {
+  return { name: '', cookbook_equipment_id: null, quantity: null };
+}
+
 export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory | ''>('');
   const [preparation, setPreparation] = useState('');
   const [servings, setServings] = useState(4);
   const [prepTime, setPrepTime] = useState<string>('');
+  const [extraTime, setExtraTime] = useState('');
+  const [extraTimeLabel, setExtraTimeLabel] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -145,6 +252,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
   const [notes, setNotes] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [ingredients, setIngredients] = useState<IngredientInput[]>([emptyIngredient()]);
+  const [equipment, setEquipment] = useState<EquipmentInput[]>([emptyEquipment()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -157,6 +265,8 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
       setPreparation(initial.preparation);
       setServings(initial.servings);
       setPrepTime(initial.prep_time?.toString() ?? '');
+      setExtraTime(initial.extra_time ?? '');
+      setExtraTimeLabel(initial.extra_time_label ?? '');
       setImageUrl(initial.image_url ?? '');
       setTags(initial.tags);
       setTagInput('');
@@ -167,12 +277,18 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((i) => ({ name: i.name, cookbook_product_id: i.cookbook_product_id, quantity: i.quantity, unit: i.unit }));
       setIngredients(ings.length ? ings : [emptyIngredient()]);
+      const eqs = (initial.recipe_equipment ?? [])
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((e) => ({ name: e.name, cookbook_equipment_id: e.cookbook_equipment_id, quantity: e.quantity }));
+      setEquipment(eqs.length ? eqs : [emptyEquipment()]);
     } else {
       setTitle(''); setCategory(''); setPreparation('');
-      setServings(4); setPrepTime(''); setImageUrl('');
+      setServings(4); setPrepTime(''); setExtraTime(''); setExtraTimeLabel('');
+      setImageUrl('');
       setTags([]); setTagInput(''); setSource(''); setNotes('');
       setIsFavorite(false);
       setIngredients([emptyIngredient()]);
+      setEquipment([emptyEquipment()]);
     }
     setError('');
   }, [open, initial]);
@@ -198,6 +314,18 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
     setIngredients((prev) => [...prev, emptyIngredient()]);
   };
 
+  const updateEquipment = (index: number, value: EquipmentInput) => {
+    setEquipment((prev) => prev.map((eq, i) => (i === index ? value : eq)));
+  };
+
+  const removeEquipment = (index: number) => {
+    setEquipment((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addEquipment = () => {
+    setEquipment((prev) => [...prev, emptyEquipment()]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -206,6 +334,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
     if (!category) { setError('Kies een categorie'); return; }
 
     const validIngredients = ingredients.filter((i) => i.name.trim());
+    const validEquipment = equipment.filter((e) => e.name.trim());
 
     setSaving(true);
     try {
@@ -215,12 +344,15 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
         preparation: preparation.trim(),
         servings,
         prep_time: prepTime ? Number(prepTime) : null,
+        extra_time: extraTime.trim() || null,
+        extra_time_label: extraTimeLabel.trim() || null,
         image_url: imageUrl.trim() || null,
         tags,
         source: source.trim() || null,
         notes: notes.trim() || null,
         is_favorite: isFavorite,
         ingredients: validIngredients,
+        equipment: validEquipment,
       });
       onClose();
     } catch (err) {
@@ -324,6 +456,29 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
             </button>
           </div>
 
+          {/* Equipment / benodigdheden */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--cb-ink)] mb-2">Benodigdheden</label>
+            <div className="space-y-2">
+              {equipment.map((eq, i) => (
+                <EquipmentRow
+                  key={i}
+                  value={eq}
+                  onChange={(v) => updateEquipment(i, v)}
+                  onRemove={() => removeEquipment(i)}
+                  canRemove={equipment.length > 1}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addEquipment}
+              className="mt-2 text-sm text-[var(--cb-accent)] font-medium flex items-center gap-1 hover:opacity-75"
+            >
+              + Benodigdheid toevoegen
+            </button>
+          </div>
+
           {/* Preparation */}
           <div>
             <label className="block text-sm font-medium text-[var(--cb-ink)] mb-1.5">Bereiding</label>
@@ -357,6 +512,30 @@ export function RecipeForm({ open, onClose, onSubmit, initial }: RecipeFormProps
                 value={prepTime}
                 onChange={(e) => setPrepTime(e.target.value)}
                 placeholder="optioneel"
+                className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)]"
+              />
+            </div>
+          </div>
+
+          {/* Extra time */}
+          <div className="flex gap-3">
+            <div className="w-1/3">
+              <label className="block text-sm font-medium text-[var(--cb-ink)] mb-1.5">Extra tijd</label>
+              <input
+                type="text"
+                value={extraTime}
+                onChange={(e) => setExtraTime(e.target.value)}
+                placeholder="bv. 4 uur"
+                className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)]"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-[var(--cb-ink)] mb-1.5">Waarvoor</label>
+              <input
+                type="text"
+                value={extraTimeLabel}
+                onChange={(e) => setExtraTimeLabel(e.target.value)}
+                placeholder="bv. opstijven, marineren"
                 className="w-full px-4 py-3 rounded-2xl border border-[var(--cb-line)] text-[var(--cb-ink)] text-sm bg-white outline-none focus:border-[var(--cb-accent)]"
               />
             </div>

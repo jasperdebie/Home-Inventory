@@ -87,6 +87,12 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite }: Reci
           {recipe.prep_time && (
             <span className="flex items-center gap-1">⏱ <strong className="text-[var(--cb-ink)]">{recipe.prep_time} min</strong></span>
           )}
+          {recipe.extra_time && (
+            <span className="flex items-center gap-1">
+              ⏳ <strong className="text-[var(--cb-ink)]">{recipe.extra_time}</strong>
+              {recipe.extra_time_label && <span>{recipe.extra_time_label}</span>}
+            </span>
+          )}
           {/* Portion adjuster */}
           <div className="flex items-center gap-2">
             <span>👤</span>
@@ -141,6 +147,25 @@ export function RecipeDetail({ recipe, onClose, onEdit, onToggleFavorite }: Reci
                 Hoeveelheden aangepast voor {servings} personen (origineel: {recipe.servings} pers.)
               </p>
             )}
+          </section>
+        )}
+
+        {/* Equipment / benodigdheden */}
+        {(recipe.recipe_equipment?.length ?? 0) > 0 && (
+          <section className="mt-6">
+            <h2 className="text-base font-semibold text-[var(--cb-ink)] mb-3">Benodigdheden</h2>
+            <ul className="space-y-2">
+              {[...(recipe.recipe_equipment ?? [])]
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((eq) => (
+                  <li key={eq.id} className="flex items-center gap-3 py-2 border-b border-[var(--cb-line)] last:border-0">
+                    <span className="text-sm text-[var(--cb-muted)] w-16 shrink-0 text-right">
+                      {eq.quantity != null ? eq.quantity : ''}
+                    </span>
+                    <span className="text-sm text-[var(--cb-ink)]">{eq.name}</span>
+                  </li>
+                ))}
+            </ul>
           </section>
         )}
 

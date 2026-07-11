@@ -12,8 +12,15 @@ export interface IngredientInput {
   unit?: string | null;
 }
 
-export interface RecipeFormData extends Omit<Recipe, 'id' | 'created_at' | 'updated_at' | 'recipe_ingredients'> {
+export interface EquipmentInput {
+  name: string;
+  cookbook_equipment_id?: string | null;
+  quantity?: number | null;
+}
+
+export interface RecipeFormData extends Omit<Recipe, 'id' | 'created_at' | 'updated_at' | 'recipe_ingredients' | 'recipe_equipment'> {
   ingredients: IngredientInput[];
+  equipment: EquipmentInput[];
 }
 
 export function useRecipes() {

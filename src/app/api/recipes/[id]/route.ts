@@ -8,6 +8,10 @@ const INGREDIENTS_QUERY = `
   recipe_ingredients (
     *,
     cookbook_product:cookbook_products (*)
+  ),
+  recipe_equipment (
+    *,
+    cookbook_equipment:cookbook_equipment (*)
   )
 ` as const;
 
@@ -23,6 +27,25 @@ async function upsertCookbookProduct(supabase: Awaited<ReturnType<typeof createC
 
   const { data: created } = await supabase
     .from('cookbook_products')
+    .insert([{ name: name.trim(), name_normalized: normalized }])
+    .select('id')
+    .single();
+
+  return created?.id as string | null;
+}
+
+async function upsertCookbookEquipment(supabase: Awaited<ReturnType<typeof createClient>>, name: string) {
+  const normalized = name.trim().toLowerCase();
+  const { data: existing } = await supabase
+    .from('cookbook_equipment')
+    .select('id')
+    .eq('name_normalized', normalized)
+    .maybeSingle();
+
+  if (existing) return existing.id as string;
+
+  const { data: created } = await supabase
+    .from('cookbook_equipment')
     .insert([{ name: name.trim(), name_normalized: normalized }])
     .select('id')
     .single();
@@ -58,7 +81,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  const { title, category, preparation, servings, prep_time, image_url, tags, source, notes, is_favorite, ingredients } = body;
+  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, is_favorite, ingredients, equipment } = body;
 
   if (title !== undefined && !title?.trim()) {
     return NextResponse.json({ error: 'Titel mag niet leeg zijn' }, { status: 400 });
@@ -73,6 +96,8 @@ export async function PATCH(
   if (preparation !== undefined) updateData.preparation = preparation.trim();
   if (servings !== undefined)    updateData.servings    = Number(servings) || 4;
   if (prep_time !== undefined)   updateData.prep_time   = prep_time ? Number(prep_time) : null;
+  if (extra_time !== undefined)  updateData.extra_time  = extra_time?.trim() || null;
+  if (extra_time_label !== undefined) updateData.extra_time_label = extra_time_label?.trim() || null;
   if (image_url !== undefined)   updateData.image_url   = image_url?.trim() || null;
   if (tags !== undefined)        updateData.tags        = Array.isArray(tags) ? tags : [];
   if (source !== undefined)      updateData.source      = source?.trim() || null;
@@ -120,6 +145,41 @@ export async function PATCH(
       const { error: ingError } = await supabase.from('recipe_ingredients').insert(rows);
       if (ingError) {
         return NextResponse.json({ error: ingError.message }, { status: 500 });
+      }
+    }
+  }
+
+  // Replace equipment if provided
+  if (Array.isArray(equipment)) {
+    const { error: deleteError } = await supabase
+      .from('recipe_equipment')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    const rows = await Promise.all(
+      equipment
+        .filter((eq: { name?: string }) => eq.name?.trim())
+        .map(async (eq: { name: string; cookbook_equipment_id?: string | null; quantity?: number | null }, index: number) => {
+          const equipmentId = eq.cookbook_equipment_id
+            ?? await upsertCookbookEquipment(supabase, eq.name);
+          return {
+            recipe_id: id,
+            cookbook_equipment_id: equipmentId ?? null,
+            name: eq.name.trim(),
+            quantity: eq.quantity ?? null,
+            sort_order: index,
+          };
+        })
+    );
+
+    if (rows.length > 0) {
+      const { error: eqError } = await supabase.from('recipe_equipment').insert(rows);
+      if (eqError) {
+        return NextResponse.json({ error: eqError.message }, { status: 500 });
       }
     }
   }

@@ -68,6 +68,16 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
             🔴 Uitgeleend {book.lent_to && `aan ${book.lent_to}`}
           </span>
         )}
+        {book.hardcover && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full">
+            📕 Hardcover
+          </span>
+        )}
+        {book.condition && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+            {book.condition}
+          </span>
+        )}
       </div>
 
       {book.notes && (

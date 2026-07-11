@@ -43,6 +43,8 @@ export function BookForm({
   const [bought, setBought] = useState(false);
   const [lent, setLent] = useState(false);
   const [lentTo, setLentTo] = useState('');
+  const [condition, setCondition] = useState('');
+  const [hardcover, setHardcover] = useState(false);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -62,6 +64,8 @@ export function BookForm({
       setBought(initialBook.bought);
       setLent(initialBook.lent);
       setLentTo(initialBook.lent_to || '');
+      setCondition(initialBook.condition || '');
+      setHardcover(initialBook.hardcover);
       setNotes(initialBook.notes || '');
     } else {
       resetForm();
@@ -160,6 +164,8 @@ export function BookForm({
     setBought(false);
     setLent(false);
     setLentTo('');
+    setCondition('');
+    setHardcover(false);
     setNotes('');
   };
 
@@ -214,6 +220,8 @@ export function BookForm({
         bought: wishlist ? false : bought,
         lent: wishlist ? false : lent,
         lent_to: (!wishlist && lent && lentTo.trim()) ? lentTo.trim() : null,
+        condition: condition || null,
+        hardcover,
         notes: notes.trim() || null,
       });
 
@@ -414,6 +422,31 @@ export function BookForm({
               </>
             )}
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Staat van het boek</label>
+            <select
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">Niet opgegeven</option>
+              <option value="Zeer goede staat">Zeer goede staat</option>
+              <option value="Goede staat">Goede staat</option>
+              <option value="Mindere staat">Mindere staat</option>
+              <option value="Slechte staat">Slechte staat</option>
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={hardcover}
+              onChange={(e) => setHardcover(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            <span className="text-sm font-medium text-gray-700">Hardcover</span>
+          </label>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

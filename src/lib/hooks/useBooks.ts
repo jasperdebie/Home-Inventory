@@ -13,6 +13,8 @@ export interface Book {
   lent: boolean;
   lent_to: string | null;
   wishlist: boolean;
+  condition: string | null;
+  hardcover: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;

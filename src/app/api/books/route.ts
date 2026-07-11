@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
 
-  const { title, author, isbn, genre, read, bought, lent, lent_to, notes, wishlist } = body;
+  const { title, author, isbn, genre, read, bought, lent, lent_to, notes, wishlist, condition, hardcover } = body;
 
   if (!title?.trim() || !author?.trim()) {
     return NextResponse.json(
@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
         lent_to: lent && lent_to?.trim() ? lent_to.trim() : null,
         notes: notes?.trim() || null,
         wishlist: wishlist || false,
+        condition: condition?.trim() || null,
+        hardcover: hardcover || false,
       },
     ])
     .select();

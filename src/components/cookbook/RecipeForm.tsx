@@ -223,10 +223,12 @@ function EquipmentRow({ value, onChange, onRemove, canRemove }: EquipmentRowProp
 // ─── Sub-recipe row (verwijzing naar bestaand recept) ─────────────────
 
 const CATEGORY_EMOJI_MINI: Record<RecipeCategory, string> = {
-  hapje:        '🥨',
-  voorgerecht:  '🥗',
-  hoofdgerecht: '🍽️',
-  dessert:      '🍰',
+  hapje:         '🥨',
+  voorgerecht:   '🥗',
+  hoofdgerecht:  '🍽️',
+  tussendoortje: '🍪',
+  dessert:       '🍰',
+  drankjes:      '🥤',
 };
 
 interface SubRecipeRowProps {

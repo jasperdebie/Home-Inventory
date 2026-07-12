@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-const VALID_CATEGORIES = ['hapje', 'voorgerecht', 'hoofdgerecht', 'dessert'] as const;
+const VALID_CATEGORIES = ['hapje', 'voorgerecht', 'hoofdgerecht', 'tussendoortje', 'dessert', 'drankjes'] as const;
 
 const VALID_RATINGS = ['zeer_goed', 'goed', 'matig', 'minder', 'slecht'] as const;
 

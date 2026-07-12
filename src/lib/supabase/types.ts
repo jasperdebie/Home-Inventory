@@ -97,7 +97,7 @@ export type RecipeEquipment = {
   cookbook_equipment?: CookbookEquipment | null;
 };
 
-export type RecipeCategory = 'hapje' | 'voorgerecht' | 'hoofdgerecht' | 'dessert';
+export type RecipeCategory = 'hapje' | 'voorgerecht' | 'hoofdgerecht' | 'tussendoortje' | 'dessert' | 'drankjes';
 
 export type RecipeRating = 'zeer_goed' | 'goed' | 'matig' | 'minder' | 'slecht';
 

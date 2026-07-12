@@ -12,10 +12,12 @@ interface RecipeCardProps {
 }
 
 const CATEGORY_EMOJI: Record<RecipeCategory, string> = {
-  hapje:        '🥨',
-  voorgerecht:  '🥗',
-  hoofdgerecht: '🍽️',
-  dessert:      '🍰',
+  hapje:         '🥨',
+  voorgerecht:   '🥗',
+  hoofdgerecht:  '🍽️',
+  tussendoortje: '🍪',
+  dessert:       '🍰',
+  drankjes:      '🥤',
 };
 
 export function RecipeCard({ recipe, onOpen, onEdit, onDelete, onToggleFavorite }: RecipeCardProps) {

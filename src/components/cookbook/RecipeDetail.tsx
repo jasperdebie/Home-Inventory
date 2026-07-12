@@ -5,10 +5,12 @@ import { Recipe, RecipeCategory, RecipeIngredient } from '@/lib/supabase/types';
 import { CATEGORIES } from './CategoryFilter';
 
 const CATEGORY_EMOJI: Record<RecipeCategory, string> = {
-  hapje:        '🥨',
-  voorgerecht:  '🥗',
-  hoofdgerecht: '🍽️',
-  dessert:      '🍰',
+  hapje:         '🥨',
+  voorgerecht:   '🥗',
+  hoofdgerecht:  '🍽️',
+  tussendoortje: '🍪',
+  dessert:       '🍰',
+  drankjes:      '🥤',
 };
 
 /**

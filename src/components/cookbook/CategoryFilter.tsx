@@ -3,10 +3,12 @@
 import { RecipeCategory } from '@/lib/supabase/types';
 
 const CATEGORIES: { value: RecipeCategory; label: string; emoji: string }[] = [
-  { value: 'hapje',        label: 'Hapje',        emoji: '🥨' },
-  { value: 'voorgerecht',  label: 'Voorgerecht',  emoji: '🥗' },
-  { value: 'hoofdgerecht', label: 'Hoofdgerecht', emoji: '🍽️' },
-  { value: 'dessert',      label: 'Dessert',      emoji: '🍰' },
+  { value: 'hapje',         label: 'Hapje',         emoji: '🥨' },
+  { value: 'voorgerecht',   label: 'Voorgerecht',   emoji: '🥗' },
+  { value: 'hoofdgerecht',  label: 'Hoofdgerecht',  emoji: '🍽️' },
+  { value: 'tussendoortje', label: 'Tussendoortje', emoji: '🍪' },
+  { value: 'dessert',       label: 'Dessert',       emoji: '🍰' },
+  { value: 'drankjes',      label: 'Drankjes',      emoji: '🥤' },
 ];
 
 interface CategoryFilterProps {

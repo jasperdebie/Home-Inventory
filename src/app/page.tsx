@@ -42,6 +42,17 @@ export default function LandingPage() {
               <p className="text-sm text-orange-700 mt-2">Beheer je persoonlijke receptenverzameling.</p>
             </div>
           </Link>
+
+          <Link
+            href="/food-diary"
+            className="group rounded-2xl border border-purple-200 bg-purple-50 p-8 min-h-48 flex flex-col justify-between transition-all hover:bg-purple-100 hover:border-purple-300"
+          >
+            <span className="text-4xl">🍽️</span>
+            <div>
+              <h2 className="text-2xl font-semibold text-purple-900">Eetdagboek</h2>
+              <p className="text-sm text-purple-700 mt-2">Houd bij wat je eet.</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

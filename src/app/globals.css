@@ -71,3 +71,96 @@ body {
 .animate-sheet-up {
   animation: sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
 }
+
+/* ─── Eet-tracker – Samsung One UI pastel (lavendel-blauw) ─────────────── */
+:root {
+  --et-bg: #F6F6FB;
+  --et-card: #FFFFFF;
+  --et-ink: #3A3A44;
+  --et-muted: #9A9AA8;
+  --et-line: #ECECF3;
+  --et-accent: #8E9CF2;
+  --et-accent-2: #A78BF0;
+  --et-accent-soft: #EDEFFD;
+  --et-mint: #7ED9A8;
+  --et-mint-soft: #E4F7EE;
+  --et-apricot: #F3B78A;
+  --et-apricot-soft: #FBEBDE;
+  --et-gradient: linear-gradient(135deg, #8E9CF2 0%, #A78BF0 100%);
+}
+
+/* Zachte pastelgloed in de hoeken van de achtergrond */
+.et-page {
+  background:
+    radial-gradient(60vw 40vw at 0% 0%, rgba(142,156,242,0.10), transparent 60%),
+    radial-gradient(60vw 40vw at 100% 100%, rgba(167,139,240,0.10), transparent 60%),
+    var(--et-bg);
+}
+
+@keyframes et-card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.et-card-in {
+  opacity: 0;
+  animation: et-card-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes et-pop {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.et-pop {
+  animation: et-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes et-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.et-fade {
+  animation: et-fade 0.18s ease-out;
+}
+
+/* Herbruikbare eet-tracker UI-elementen */
+.et-input {
+  width: 100%;
+  border-radius: 1rem;
+  background: var(--et-accent-soft);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.95rem;
+  color: var(--et-ink);
+  outline: none;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.et-input::placeholder { color: var(--et-muted); }
+.et-input:focus {
+  border-color: var(--et-accent);
+  background: #fff;
+}
+
+.et-btn-primary {
+  border-radius: 999px;
+  background: var(--et-gradient);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.1rem;
+  box-shadow: 0 6px 16px rgba(142,156,242,0.35);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.et-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(142,156,242,0.42); }
+.et-btn-primary:active { transform: translateY(0) scale(0.98); }
+
+.et-btn-ghost {
+  border-radius: 999px;
+  background: #F1F1F6;
+  color: var(--et-ink);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.1rem;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.et-btn-ghost:hover { background: #E9E9F1; }
+.et-btn-ghost:active { transform: scale(0.98); }

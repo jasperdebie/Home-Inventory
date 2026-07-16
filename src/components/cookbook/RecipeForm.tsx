@@ -502,6 +502,7 @@ export function RecipeForm({ open, onClose, onSubmit, initial, allRecipes = [] }
         storage: storage.trim() || null,
         is_favorite: isFavorite,
         is_made: isMade,
+        rating: initial?.rating ?? null,
         star_rating: starRating,
         health_rating: healthRating,
         ingredients: validIngredients,

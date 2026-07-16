@@ -12,12 +12,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isLanding = pathname === '/';
   const isBookLibrary = pathname === '/book-library' || pathname.startsWith('/book-library/');
   const isCookbook = pathname === '/cookbook' || pathname.startsWith('/cookbook/');
+  const isFoodDiary = pathname === '/food-diary' || pathname.startsWith('/food-diary/');
 
   if (isLogin || isLanding) {
     return <>{children}</>;
   }
 
-  if (isBookLibrary || isCookbook) {
+  if (isBookLibrary || isCookbook || isFoodDiary) {
     return <ToastProvider>{children}</ToastProvider>;
   }
 

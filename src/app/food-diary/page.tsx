@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toDateKey, useFoodDiary } from '@/lib/hooks/useFoodDiary';
 import { DayView } from '@/components/food-diary/DayView';
@@ -15,6 +15,7 @@ function startOfDay(d: Date) {
 
 export default function FoodDiaryPage() {
   const diary = useFoodDiary();
+  const { ensureDay, ensureMonth } = diary;
 
   const [tab, setTab] = useState<Tab>('day');
   const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()));
@@ -27,6 +28,18 @@ export default function FoodDiaryPage() {
   const todayKey = toDateKey(new Date());
   const dateKey = toDateKey(selectedDate);
   const isToday = dateKey === todayKey;
+
+  // Laad de geselecteerde dag uit Supabase.
+  useEffect(() => {
+    ensureDay(dateKey);
+  }, [dateKey, ensureDay]);
+
+  // Laad de maandsamenvatting (welke dagen eten/klachten hebben).
+  useEffect(() => {
+    const from = toDateKey(new Date(month.getFullYear(), month.getMonth(), 1));
+    const to = toDateKey(new Date(month.getFullYear(), month.getMonth() + 1, 0));
+    ensureMonth(from, to);
+  }, [month, ensureMonth]);
 
   const shiftDay = (delta: number) => {
     const next = new Date(selectedDate);

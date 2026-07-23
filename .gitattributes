@@ -1,0 +1,13 @@
+# Normaliseer regeleindes: opslag in de repo altijd als LF, en check ook
+# op Windows/WSL uit als LF (voorkomt CRLF-ruis in git status).
+* text=auto eol=lf
+
+# Binaire bestanden nooit aanraken.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary

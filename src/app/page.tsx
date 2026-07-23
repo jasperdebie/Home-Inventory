@@ -53,6 +53,19 @@ export default function LandingPage() {
               <p className="text-sm text-purple-700 mt-2">Houd bij wat je eet.</p>
             </div>
           </Link>
+
+          <Link
+            href="/people"
+            className="group rounded-2xl border border-rose-200 bg-rose-50 p-8 min-h-48 flex flex-col justify-between transition-all hover:bg-rose-100 hover:border-rose-300"
+          >
+            <span className="text-4xl">🎁</span>
+            <div>
+              <h2 className="text-2xl font-semibold text-rose-900">Personen</h2>
+              <p className="text-sm text-rose-700 mt-2">
+                Onthoud verjaardagen, cadeaus en wat je wil vragen of meenemen.
+              </p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

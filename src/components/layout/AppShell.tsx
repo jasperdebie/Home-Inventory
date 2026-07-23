@@ -13,12 +13,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isBookLibrary = pathname === '/book-library' || pathname.startsWith('/book-library/');
   const isCookbook = pathname === '/cookbook' || pathname.startsWith('/cookbook/');
   const isFoodDiary = pathname === '/food-diary' || pathname.startsWith('/food-diary/');
+  const isPeople = pathname === '/people' || pathname.startsWith('/people/');
 
   if (isLogin || isLanding) {
     return <>{children}</>;
   }
 
-  if (isBookLibrary || isCookbook || isFoodDiary) {
+  if (isBookLibrary || isCookbook || isFoodDiary || isPeople) {
     return <ToastProvider>{children}</ToastProvider>;
   }
 

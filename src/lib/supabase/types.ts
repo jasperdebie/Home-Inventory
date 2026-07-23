@@ -146,3 +146,43 @@ export type Recipe = {
   recipe_equipment?: RecipeEquipment[];
   recipe_components?: RecipeComponent[];
 };
+
+// ─── Personen & Herinneringen ────────────────────────────────
+
+export type PersonGroupRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+export type PersonRow = {
+  id: string;
+  name: string;
+  group_id: string | null;
+  birthday: string | null;
+  birthday_has_year: boolean;
+  notes: string | null;
+  created_at: string;
+};
+
+export type PersonReminderRow = {
+  id: string;
+  person_id: string;
+  type: 'bring' | 'ask' | 'event';
+  text: string;
+  due_date: string | null;
+  recurs_annually: boolean;
+  done: boolean;
+  done_at: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+export type PersonGiftIdeaRow = {
+  id: string;
+  person_id: string;
+  text: string;
+  given: boolean;
+  given_at: string | null;
+  created_at: string;
+};

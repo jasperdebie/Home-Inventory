@@ -9,6 +9,7 @@ import {
   buildUpcoming,
   buildHistory,
   toDateKey,
+  currentAge,
   type PersonSummary,
   type Reminder,
   type GiftIdea,
@@ -98,6 +99,13 @@ test('buildUpcoming: binnen venster, gesorteerd, overdue eerst', () => {
   const up = buildUpcoming(people, TODAY, 30);
   assert.deepEqual(up.map((e) => e.personName), ['Anna', 'Bram']); // Cato valt buiten 30 dagen
   assert.equal(up[0].daysUntil, -3);
+});
+
+test('currentAge: berekent voltooide jaren op basis van geboortedatum', () => {
+  assert.equal(currentAge('1980-01-01', TODAY), 46);
+  assert.equal(currentAge('1980-12-31', TODAY), 45);
+  assert.equal(currentAge('2026-07-23', TODAY), 0);
+  assert.equal(currentAge('2000-07-23', TODAY), 26);
 });
 
 test('buildHistory: alleen afgehandelde items, nieuwste eerst', () => {

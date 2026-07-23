@@ -191,6 +191,16 @@ export function buildUpcoming(
   return entries;
 }
 
+/** Huidige leeftijd in jaren op basis van geboortedatum (lokale tijd). */
+export function currentAge(birthday: string, today: Date): number {
+  const [y, m, d] = birthday.split('-').map(Number);
+  let age = today.getFullYear() - y;
+  const hadBirthdayThisYear =
+    today.getMonth() + 1 > m || (today.getMonth() + 1 === m && today.getDate() >= d);
+  if (!hadBirthdayThisYear) age -= 1;
+  return age;
+}
+
 /** Historiek: afgehandelde reminders + gegeven cadeau-ideeën, nieuwste eerst. */
 export function buildHistory(reminders: Reminder[], giftIdeas: GiftIdea[]): HistoryEntry[] {
   const out: HistoryEntry[] = [];

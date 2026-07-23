@@ -14,6 +14,7 @@ import { ReminderSection } from '@/components/people/ReminderSection';
 import { ReminderFormDialog } from '@/components/people/ReminderFormDialog';
 import { GiftIdeaSection } from '@/components/people/GiftIdeaSection';
 import { HistorySection } from '@/components/people/HistorySection';
+import { currentAge } from '@/lib/people/shared';
 
 export default function PersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -94,16 +95,32 @@ export default function PersonDetailPage({ params }: { params: Promise<{ id: str
             )}
           </div>
 
-          <Input
-            label="Verjaardag"
-            type="date"
-            defaultValue={person.birthday ?? ''}
-            onBlur={(e) => {
-              if ((e.target.value || null) !== person.birthday) {
-                updatePerson({ birthday: e.target.value || null });
-              }
-            }}
-          />
+          <div>
+            <Input
+              label="Verjaardag"
+              type="date"
+              defaultValue={person.birthday ?? ''}
+              onBlur={(e) => {
+                if ((e.target.value || null) !== person.birthday) {
+                  updatePerson({ birthday: e.target.value || null });
+                }
+              }}
+            />
+            <label className="mt-1 flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={!person.birthday_has_year}
+                onChange={(e) => updatePerson({ birthday_has_year: !e.target.checked })}
+                className="accent-rose-500"
+              />
+              Jaar onbekend
+            </label>
+            {person.birthday && person.birthday_has_year && (
+              <p className="mt-1 text-xs text-gray-400">
+                Leeftijd: {currentAge(person.birthday, new Date())} jaar
+              </p>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notities</label>

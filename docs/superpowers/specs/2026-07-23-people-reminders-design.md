@@ -22,6 +22,8 @@ Kookboek, Eetdagboek).
   - API onder `src/app/api/people`
   - Hooks in `src/lib/hooks`
   - Gedeelde logica/types in `src/lib/people/shared.ts`
+  - Herbruikbare UI-componenten uit `src/components/ui` (Card, Button, Input,
+    Dialog, Spinner, Badge, Toast) — zoals de bestaande modules.
   - Nieuwe genummerde migratie `supabase/migrations/025_people.sql`
 - Open RLS-policies zoals de rest van het project (PIN-authenticatie wordt op
   app-niveau afgehandeld, niet in de database).
@@ -30,9 +32,20 @@ Kookboek, Eetdagboek).
 
 ## 2. Datamodel (migratie `025_people.sql`)
 
+> Noot: het bestaande `product_groups` (migratie 002) dient enkel voor het
+> groeperen van producten voor voorraadtelling en heeft niets met personen te
+> maken. We hergebruiken dus het *patroon* (aparte groepstabel + FK), niet die
+> tabel zelf, en maken een eigen `people_groups`.
+
+### Tabel `people_groups` (families / groepen)
+- `id` UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- `name` TEXT NOT NULL — bv. "Familie Janssen", "Vrienden"
+- `created_at` TIMESTAMPTZ NOT NULL DEFAULT NOW()
+
 ### Tabel `people`
 - `id` UUID PRIMARY KEY DEFAULT gen_random_uuid()
 - `name` TEXT NOT NULL
+- `group_id` UUID REFERENCES people_groups(id) ON DELETE SET NULL (optioneel)
 - `birthday` DATE (optioneel)
 - `birthday_has_year` BOOLEAN NOT NULL DEFAULT true — als false telt alleen
   dag+maand (jaar onbekend)
@@ -67,14 +80,24 @@ Kookboek, Eetdagboek).
 - `created_at` TIMESTAMPTZ NOT NULL DEFAULT NOW()
 
 ### Indexes
+- `idx_people_group` ON people(group_id) WHERE group_id IS NOT NULL
 - `idx_people_reminders_person` ON people_reminders(person_id)
 - `idx_people_reminders_due` ON people_reminders(due_date)
 - `idx_people_gift_ideas_person` ON people_gift_ideas(person_id)
 - `idx_people_birthday` ON people(birthday)
 
 ### RLS
-Open policies (SELECT/INSERT/UPDATE/DELETE met USING/CHECK true) op alle drie de
+Open policies (SELECT/INSERT/UPDATE/DELETE met USING/CHECK true) op alle vier de
 tabellen, identiek aan de bestaande modules.
+
+### Historiek (afgeleid, geen aparte tabel)
+De historiek is een alleen-lezen weergave per persoon, samengesteld uit
+bestaande records:
+- Afgehandelde reminders (`done = true`, met `done_at`).
+- Gegeven cadeau-ideeën (`given = true`, met `given_at`).
+Gesorteerd op datum (nieuwste eerst). Terugkerende events rollen door en laten
+bewust geen historiek-record achter (het gaat vooral om kado's en eenmalige
+zaken).
 
 ### Bewuste keuzes
 - Verjaardag als veld op de persoon (niet als reminder-type).
@@ -82,6 +105,9 @@ tabellen, identiek aan de bestaande modules.
   blijft mogelijk.
 - Terugkerende items (verjaardag + events met `recurs_annually`) blijven
   bestaan en rollen door naar de eerstvolgende occurrence.
+- Groepen als eigen `people_groups` (patroon van `product_groups`, niet die
+  tabel zelf).
+- Historiek afgeleid uit bestaande velden, geen extra tabel.
 
 ## 3. Schermen / UX
 
@@ -95,15 +121,19 @@ Twee zones onder elkaar:
    events (incl. terugkerende) en reminders met een `due_date` die binnen het
    venster (30 dagen) vallen. Elk item toont persoon + type-icoon + "over X
    dagen". Dit is het anti-vergeet-vangnet.
-2. **Personenlijst** — kaart/rij per persoon met naam, eerstvolgende relevante
-   datum en badges met aantallen open items (bv. 🎁 2, ❓ 1). Bovenaan:
+2. **Personenlijst** — kaart/rij per persoon met naam, groep-label (indien
+   ingesteld), eerstvolgende relevante datum en badges met aantallen open items
+   (bv. 🎁 2, ❓ 1). Bovenaan:
    - Sorteerknop: *op naam* (default) ↔ *op eerstvolgende datum*.
-   - "+ Persoon"-knop.
+   - Groepsfilter (optioneel): toon alle personen of één groep. Optioneel
+     gegroepeerde weergave per groep.
+   - "+ Persoon"-knop, en beheer van groepen (aanmaken/hernoemen/verwijderen via
+     een Dialog).
 
 ### Persoon-detail (`/people/[id]`)
 Alles van één persoon op één scherm:
-- Kop: naam, verjaardag (met "over X dagen" indien gezet), notitieveld
-  (inline bewerkbaar).
+- Kop: naam, groep (kiesbaar), verjaardag (met "over X dagen" indien gezet),
+  notitieveld (inline bewerkbaar).
 - **Herinneringen**, gegroepeerd per type (Meenemen / Vragen / Event): elk met
   afvink-checkbox, tekst, evt. datum + terugkerend-indicator. "+ Herinnering"
   opent een klein formulier (type, tekst, optionele/verplichte datum,
@@ -111,6 +141,9 @@ Alles van één persoon op één scherm:
 - **Cadeau-ideeën** — aparte lijst, elk met "gegeven"-vinkje. "+ Idee".
 - Afgevinkte/afgehandelde items onder een inklapbaar "Afgehandeld"-kopje
   (zichtbaar maar uit de weg).
+- **Historiek** — inklapbare, alleen-lezen tijdlijn van afgehandelde reminders
+  en gegeven cadeau-ideeën (nieuwste eerst), zodat je ziet wat je eerder
+  meebracht/gaf.
 
 ## 4. Sortering & "binnenkort"-logica
 
@@ -152,13 +185,19 @@ Volgen het bestaande patroon (`createClient()` uit `@/lib/supabase/server`,
 `NextResponse`, validatie + nette foutmeldingen).
 
 - `src/app/api/people/route.ts`
-  - `GET`: alle personen met data voor lijst + "binnenkort" (verjaardag,
+  - `GET`: alle personen met data voor lijst + "binnenkort" (verjaardag, groep,
     reminders met datum, counts van open items/gift ideas).
-  - `POST`: nieuwe persoon.
+  - `POST`: nieuwe persoon (optioneel `group_id`).
 - `src/app/api/people/[id]/route.ts`
-  - `GET`: volledig detail (persoon + reminders + gift ideas).
-  - `PATCH`: naam / verjaardag (+ `birthday_has_year`) / notities.
+  - `GET`: volledig detail (persoon + groep + reminders + gift ideas; historiek
+    is afgeleid uit de done/given-records).
+  - `PATCH`: naam / groep / verjaardag (+ `birthday_has_year`) / notities.
   - `DELETE`: persoon + cascade.
+- `src/app/api/people/groups/route.ts`
+  - `GET`: alle groepen. `POST`: nieuwe groep.
+- `src/app/api/people/groups/[id]/route.ts`
+  - `PATCH`: hernoemen. `DELETE`: groep verwijderen (personen behouden,
+    `group_id` → NULL via ON DELETE SET NULL).
 - `src/app/api/people/[id]/reminders/route.ts`
   - `POST`: nieuwe reminder. Validatie: `type` ∈ {bring, ask, event};
     `due_date` verplicht als type = event; `recurs_annually` alleen zinvol bij
@@ -174,13 +213,16 @@ Volgen het bestaande patroon (`createClient()` uit `@/lib/supabase/server`,
 
 ### Hooks
 Client-side, patroon van `useFoodDiary` e.d.:
-- `usePeople` — lijst + sortering + "binnenkort".
+- `usePeople` — lijst + sortering + groepsfilter + "binnenkort".
 - `usePerson(id)` — detail + mutaties.
+- `usePeopleGroups` — groepen ophalen/aanmaken/hernoemen/verwijderen.
 
 ### Gedeelde helper `src/lib/people/shared.ts`
-- TypeScript-types (Person, Reminder, GiftIdea, ReminderType, sorteeropties).
+- TypeScript-types (Person, PersonGroup, Reminder, GiftIdea, ReminderType,
+  HistoryEntry, sorteeropties).
 - Pure "eerstvolgende-datum"-berekening.
 - "Binnenkort"-venster (30 dagen).
+- Historiek-samenstelling uit done reminders + given gift ideas.
 - Type-labels/iconen.
 
 ### Testing
@@ -193,6 +235,4 @@ foutgevoelige kern.
 - Rest handmatig verifiëren in de dev-omgeving.
 
 ## Bewust buiten scope (later mogelijk)
-- Automatische historiek van gegeven kado's/afgehandelde items.
-- Groepen/familie-tags (hergebruik van bestaand "groups"-concept).
 - Push-notificaties (PWA via serwist — technisch mogelijk, maar aparte klus).

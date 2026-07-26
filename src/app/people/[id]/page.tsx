@@ -152,7 +152,15 @@ export default function PersonDetailPage({ params }: { params: Promise<{ id: str
           onDelete={deleteGiftIdea}
         />
 
-        <HistorySection reminders={reminders} giftIdeas={giftIdeas} />
+        <HistorySection
+          reminders={reminders}
+          giftIdeas={giftIdeas}
+          onReopen={(entry) =>
+            entry.kind === 'gift'
+              ? updateGiftIdea(entry.id, { given: false })
+              : updateReminder(entry.id, { done: false })
+          }
+        />
       </div>
 
       <ReminderFormDialog

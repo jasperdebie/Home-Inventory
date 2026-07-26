@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
   REMINDER_TYPES,
-  reminderDef,
   daysUntil,
   type Reminder,
 } from '@/lib/people/shared';
@@ -31,9 +29,7 @@ function DueLabel({ reminder, today }: { reminder: Reminder; today: Date }) {
 
 export function ReminderSection({ reminders, onToggle, onDelete, onAdd }: Props) {
   const today = new Date();
-  const [showDone, setShowDone] = useState(false);
   const open = reminders.filter((r) => !r.done);
-  const done = reminders.filter((r) => r.done);
 
   return (
     <section className="space-y-3">
@@ -82,30 +78,6 @@ export function ReminderSection({ reminders, onToggle, onDelete, onAdd }: Props)
 
       {open.length === 0 && (
         <p className="text-sm text-gray-500">Geen openstaande herinneringen.</p>
-      )}
-
-      {done.length > 0 && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowDone((s) => !s)}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            {showDone ? '▾' : '▸'} Afgehandeld ({done.length})
-          </button>
-          {showDone && (
-            <ul className="mt-2 space-y-1">
-              {done.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 text-sm text-gray-400">
-                  <input type="checkbox" checked readOnly onClick={() => onToggle(r.id, false)} />
-                  <span className="line-through">
-                    {reminderDef(r.type).icon} {r.text}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       )}
     </section>
   );

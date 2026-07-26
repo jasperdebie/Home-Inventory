@@ -11,7 +11,7 @@ export interface ReminderTypeDef {
 }
 
 export const REMINDER_TYPES: ReminderTypeDef[] = [
-  { type: 'bring', label: 'Meenemen', icon: '🎁' },
+  { type: 'bring', label: 'Meenemen', icon: '🎒' },
   { type: 'ask', label: 'Vragen', icon: '❓' },
   { type: 'event', label: 'Event', icon: '📅' },
 ];

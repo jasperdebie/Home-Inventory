@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const id = request.nextUrl.searchParams.get('id');
+  const barcode = request.nextUrl.searchParams.get('barcode');
   try {
     const rows = await sql`
       SELECT
@@ -41,6 +43,7 @@ export async function GET() {
       LEFT JOIN categories c ON c.id = p.category_id
       LEFT JOIN product_groups g ON g.id = p.group_id
       WHERE p.is_archived = FALSE
+        ${id ? sql`AND p.id = ${id}` : barcode ? sql`AND p.barcode = ${barcode}` : sql``}
       ORDER BY p.name ASC
     `;
     return NextResponse.json(rows);

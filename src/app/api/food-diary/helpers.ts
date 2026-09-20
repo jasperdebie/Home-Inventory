@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { sql } from '@/lib/db';
 import { MEAL_SLOT_VALUES } from '@/lib/food-diary/shared';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -18,26 +18,21 @@ export function isValidDate(value: unknown): boolean {
 
 /** Voeg een item toe aan de bibliotheek als het nog niet bestaat (naam + type). */
 export async function upsertLibraryItem(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   input: { name: string; type: string; comment?: string | null; ingredients?: string | null }
 ) {
   const normalized = input.name.trim().toLowerCase();
-  const { data: existing } = await supabase
-    .from('food_diary_library')
-    .select('id')
-    .eq('name_normalized', normalized)
-    .eq('type', input.type)
-    .maybeSingle();
 
-  if (existing) return;
-
-  await supabase.from('food_diary_library').insert([
-    {
-      name: input.name.trim(),
-      name_normalized: normalized,
-      type: input.type,
-      comment: input.comment?.trim() || null,
-      ingredients: input.ingredients?.trim() || null,
-    },
-  ]);
+  await sql`
+    INSERT INTO food_diary_library (
+      name, name_normalized, type, comment, ingredients
+    )
+    VALUES (
+      ${input.name.trim()},
+      ${normalized},
+      ${input.type},
+      ${input.comment?.trim() || null},
+      ${input.ingredients?.trim() || null}
+    )
+    ON CONFLICT (name_normalized, type) DO NOTHING
+  `;
 }

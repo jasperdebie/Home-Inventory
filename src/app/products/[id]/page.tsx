@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { ProductWithCategory } from '@/lib/supabase/types';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { useProductGroups } from '@/lib/hooks/useProductGroups';
@@ -41,37 +40,28 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const initializedForId = useRef<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
-
-    async function fetch() {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, category:categories(*), product_group:product_groups(*)')
-        .eq('id', id)
-        .single();
-
-      if (error || !data) {
+    async function loadProduct() {
+      try {
+        const res = await fetch(`/api/products?id=${encodeURIComponent(id)}`);
+        if (!res.ok) {
+          router.push('/products');
+          return;
+        }
+        const rows: ProductWithCategory[] = await res.json();
+        const data = rows[0];
+        if (!data) {
+          router.push('/products');
+          return;
+        }
+        setProduct(data);
+      } catch {
         router.push('/products');
-        return;
+      } finally {
+        setLoading(false);
       }
-      setProduct(data);
-      setLoading(false);
     }
 
-    fetch();
-
-    const channel = supabase
-      .channel(`product-${id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products', filter: `id=eq.${id}` },
-        () => fetch()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    loadProduct();
   }, [id, router]);
 
   // Sync edit fields only once per product (not on every refetch/realtime update)

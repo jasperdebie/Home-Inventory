@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import { rollForwardAnnual } from '@/lib/people/shared';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -9,55 +9,60 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
   const body = await request.json();
 
-  const update: Record<string, unknown> = {};
-  if ('text' in body) {
-    if (!body.text?.trim()) return NextResponse.json({ error: 'Tekst is verplicht' }, { status: 400 });
-    update.text = body.text.trim();
+  if ('text' in body && !body.text?.trim()) {
+    return NextResponse.json({ error: 'Tekst is verplicht' }, { status: 400 });
   }
-  if ('due_date' in body) {
-    if (body.due_date && !DATE_RE.test(body.due_date)) {
-      return NextResponse.json({ error: 'Ongeldige datum' }, { status: 400 });
+  if ('due_date' in body && body.due_date && !DATE_RE.test(body.due_date)) {
+    return NextResponse.json({ error: 'Ongeldige datum' }, { status: 400 });
+  }
+
+  try {
+    const [current] = await sql`SELECT id, person_id, type, text, due_date::text AS due_date, recurs_annually, done, done_at, sort_order, created_at FROM people_reminders WHERE id = ${id}`;
+    if (!current) {
+      return NextResponse.json({ error: 'Herinnering niet gevonden' }, { status: 404 });
     }
-    update.due_date = body.due_date || null;
-  }
-  if ('recurs_annually' in body) update.recurs_annually = !!body.recurs_annually;
 
-  // Afvinken: terugkerend event rolt door naar volgend jaar i.p.v. te archiveren.
-  if ('done' in body) {
-    if (body.done === true) {
-      const { data: current, error: readErr } = await supabase
-        .from('people_reminders')
-        .select('type, recurs_annually, due_date')
-        .eq('id', id)
-        .maybeSingle();
-      if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
+    let nextDueDate = 'due_date' in body ? body.due_date || null : current.due_date;
+    let nextRecurring = 'recurs_annually' in body ? Boolean(body.recurs_annually) : current.recurs_annually;
+    let nextDone = current.done;
+    let nextDoneAt = current.done_at;
 
-      if (current && current.type === 'event' && current.recurs_annually && current.due_date) {
-        update.due_date = rollForwardAnnual(current.due_date as string, new Date());
-        update.done = false;
-        update.done_at = null;
+    if ('done' in body) {
+      if (body.done === true) {
+        const currentDueDate = current.due_date as string | null;
+        if (current.type === 'event' && current.recurs_annually && currentDueDate) {
+          nextDueDate = rollForwardAnnual(currentDueDate, new Date());
+          nextDone = false;
+          nextDoneAt = null;
+        } else {
+          nextDone = true;
+          nextDoneAt = new Date();
+        }
       } else {
-        update.done = true;
-        update.done_at = new Date().toISOString();
+        nextDone = false;
+        nextDoneAt = null;
       }
-    } else {
-      update.done = false;
-      update.done_at = null;
     }
+
+    const [row] = await sql`
+      UPDATE people_reminders
+      SET
+        text = ${'text' in body ? body.text.trim() : current.text},
+        due_date = ${nextDueDate},
+        recurs_annually = ${nextRecurring},
+        done = ${nextDone},
+        done_at = ${nextDoneAt}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Update reminder failed', error);
+    return NextResponse.json({ error: 'Failed to update reminder' }, { status: 500 });
   }
-
-  const { data, error } = await supabase
-    .from('people_reminders')
-    .update(update)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
 }
 
 export async function DELETE(
@@ -65,8 +70,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { error } = await supabase.from('people_reminders').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+
+  try {
+    await sql`DELETE FROM people_reminders WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete reminder failed', error);
+    return NextResponse.json({ error: 'Failed to delete reminder' }, { status: 500 });
+  }
 }

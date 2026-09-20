@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import {
   Complaint,
   DayLog,
@@ -20,95 +20,87 @@ function emptyDay(date: string): DayLog {
   return { date, meals, complaints };
 }
 
-// GET ?date=YYYY-MM-DD            → volledige dag (meals + complaints)
-// GET ?from=YYYY-MM-DD&to=YYYY-MM-DD → maandsamenvatting (foodDates, complaintDates)
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const date = searchParams.get('date');
   const from = searchParams.get('from');
   const to = searchParams.get('to');
 
-  if (date) {
-    if (!DATE_RE.test(date)) {
-      return NextResponse.json({ error: 'Ongeldige datum' }, { status: 400 });
+  try {
+    if (date) {
+      if (!DATE_RE.test(date)) {
+        return NextResponse.json({ error: 'Ongeldige datum' }, { status: 400 });
+      }
+
+      const [items, complaints] = await Promise.all([
+        sql`
+          SELECT id, log_date::text AS log_date, slot, name, type,
+                 comment, ingredients, sort_order, created_at
+          FROM food_diary_items
+          WHERE log_date = ${date}
+          ORDER BY slot ASC, sort_order ASC, created_at ASC
+        `,
+        sql`
+          SELECT id, log_date::text AS log_date, slot, description, created_at
+          FROM food_diary_complaints
+          WHERE log_date = ${date}
+          ORDER BY created_at ASC
+        `,
+      ]);
+
+      const day = emptyDay(date);
+
+      for (const row of items) {
+        const slot = row.slot as MealSlot;
+        if (!day.meals[slot]) continue;
+        day.meals[slot].push({
+          id: row.id as string,
+          name: row.name as string,
+          type: row.type as FoodItem['type'],
+          comment: (row.comment as string | null) ?? undefined,
+          ingredients: (row.ingredients as string | null) ?? undefined,
+        });
+      }
+
+      for (const row of complaints) {
+        const slot = row.slot as MealSlot;
+        if (!day.complaints[slot]) continue;
+        day.complaints[slot].push({
+          id: row.id as string,
+          description: row.description as string,
+        });
+      }
+
+      return NextResponse.json(day);
     }
 
-    const [itemsRes, complaintsRes] = await Promise.all([
-      supabase
-        .from('food_diary_items')
-        .select('*')
-        .eq('log_date', date)
-        .order('slot', { ascending: true })
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('food_diary_complaints')
-        .select('*')
-        .eq('log_date', date)
-        .order('created_at', { ascending: true }),
-    ]);
+    if (from && to) {
+      if (!DATE_RE.test(from) || !DATE_RE.test(to)) {
+        return NextResponse.json({ error: 'Ongeldige datumreeks' }, { status: 400 });
+      }
 
-    if (itemsRes.error) {
-      return NextResponse.json({ error: itemsRes.error.message }, { status: 500 });
-    }
-    if (complaintsRes.error) {
-      return NextResponse.json({ error: complaintsRes.error.message }, { status: 500 });
-    }
+      const [foodRows, complaintRows] = await Promise.all([
+        sql`
+          SELECT DISTINCT log_date::text AS log_date
+          FROM food_diary_items
+          WHERE log_date >= ${from} AND log_date <= ${to}
+        `,
+        sql`
+          SELECT DISTINCT log_date::text AS log_date
+          FROM food_diary_complaints
+          WHERE log_date >= ${from} AND log_date <= ${to}
+        `,
+      ]);
 
-    const day = emptyDay(date);
-    for (const row of itemsRes.data ?? []) {
-      const slot = row.slot as MealSlot;
-      if (!day.meals[slot]) continue;
-      day.meals[slot].push({
-        id: row.id,
-        name: row.name,
-        type: row.type,
-        comment: row.comment ?? undefined,
-        ingredients: row.ingredients ?? undefined,
+      return NextResponse.json({
+        foodDates: foodRows.map((r) => r.log_date as string),
+        complaintDates: complaintRows.map((r) => r.log_date as string),
       });
     }
-    for (const row of complaintsRes.data ?? []) {
-      const slot = row.slot as MealSlot;
-      if (!day.complaints[slot]) continue;
-      day.complaints[slot].push({ id: row.id, description: row.description });
-    }
 
-    return NextResponse.json(day);
+    return NextResponse.json({ error: 'Geef date of from/to op' }, { status: 400 });
+  } catch (error) {
+    console.error('Food diary query failed', error);
+    return NextResponse.json({ error: 'Eetdagboek laden mislukt' }, { status: 500 });
   }
-
-  if (from && to) {
-    if (!DATE_RE.test(from) || !DATE_RE.test(to)) {
-      return NextResponse.json({ error: 'Ongeldige datumreeks' }, { status: 400 });
-    }
-
-    const [itemsRes, complaintsRes] = await Promise.all([
-      supabase
-        .from('food_diary_items')
-        .select('log_date')
-        .gte('log_date', from)
-        .lte('log_date', to),
-      supabase
-        .from('food_diary_complaints')
-        .select('log_date')
-        .gte('log_date', from)
-        .lte('log_date', to),
-    ]);
-
-    if (itemsRes.error) {
-      return NextResponse.json({ error: itemsRes.error.message }, { status: 500 });
-    }
-    if (complaintsRes.error) {
-      return NextResponse.json({ error: complaintsRes.error.message }, { status: 500 });
-    }
-
-    const foodDates = [...new Set((itemsRes.data ?? []).map((r) => r.log_date as string))];
-    const complaintDates = [
-      ...new Set((complaintsRes.data ?? []).map((r) => r.log_date as string)),
-    ];
-
-    return NextResponse.json({ foodDates, complaintDates });
-  }
-
-  return NextResponse.json({ error: 'Geef date of from/to op' }, { status: 400 });
 }

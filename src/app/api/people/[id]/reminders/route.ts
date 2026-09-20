@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import type { ReminderType } from '@/lib/people/shared';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -10,7 +10,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
   const body = await request.json();
   const { type, text, due_date, recurs_annually } = body;
 
@@ -26,34 +25,30 @@ export async function POST(
   if (type === 'event' && !due_date) {
     return NextResponse.json({ error: 'Een event heeft een datum nodig' }, { status: 400 });
   }
-  const recurring = type === 'event' ? !!recurs_annually : false;
 
-  // Volgende sort_order binnen dit type bepalen.
-  const { data: last } = await supabase
-    .from('people_reminders')
-    .select('sort_order')
-    .eq('person_id', id)
-    .eq('type', type)
-    .order('sort_order', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const sort_order = last ? (last.sort_order as number) + 1 : 0;
+  const recurring = type === 'event' ? Boolean(recurs_annually) : false;
 
-  const { data, error } = await supabase
-    .from('people_reminders')
-    .insert([
-      {
-        person_id: id,
-        type,
-        text: text.trim(),
-        due_date: due_date || null,
-        recurs_annually: recurring,
-        sort_order,
-      },
-    ])
-    .select()
-    .single();
+  try {
+    const [{ next_sort_order }] = await sql`
+      SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_sort_order
+      FROM people_reminders
+      WHERE person_id = ${id} AND type = ${type}
+    `;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+    const [row] = await sql`
+      INSERT INTO people_reminders (
+        person_id, type, text, due_date, recurs_annually, sort_order
+      )
+      VALUES (
+        ${id}, ${type}, ${text.trim()}, ${due_date || null},
+        ${recurring}, ${Number(next_sort_order)}
+      )
+      RETURNING *
+    `;
+
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Create reminder failed', error);
+    return NextResponse.json({ error: 'Failed to create reminder' }, { status: 500 });
+  }
 }

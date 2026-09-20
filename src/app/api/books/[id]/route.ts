@@ -1,95 +1,81 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
   const { id } = await params;
 
-  const { data, error } = await supabase
-    .from('books')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 });
+  try {
+    const [row] = await sql`SELECT * FROM books WHERE id = ${id}`;
+    if (!row) return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Book query failed', error);
+    return NextResponse.json({ error: 'Failed to load book' }, { status: 500 });
   }
-
-  return NextResponse.json(data);
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
   const { id } = await params;
   const body = await request.json();
 
-  const { title, author, isbn, genre, read, bought, lent, lent_to, notes, wishlist, condition, hardcover, first_edition, rating } = body;
-
-  if (title !== undefined && !title?.trim()) {
-    return NextResponse.json(
-      { error: 'Title cannot be empty' },
-      { status: 400 }
-    );
+  if (body.title !== undefined && !body.title?.trim()) {
+    return NextResponse.json({ error: 'Title cannot be empty' }, { status: 400 });
+  }
+  if (body.author !== undefined && !body.author?.trim()) {
+    return NextResponse.json({ error: 'Author cannot be empty' }, { status: 400 });
   }
 
-  if (author !== undefined && !author?.trim()) {
-    return NextResponse.json(
-      { error: 'Author cannot be empty' },
-      { status: 400 }
-    );
+  try {
+    const [current] = await sql`SELECT * FROM books WHERE id = ${id}`;
+    if (!current) return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+
+    const [row] = await sql`
+      UPDATE books
+      SET
+        title = ${body.title !== undefined ? body.title.trim() : current.title},
+        author = ${body.author !== undefined ? body.author.trim() : current.author},
+        isbn = ${body.isbn !== undefined ? body.isbn?.trim() || null : current.isbn},
+        genre = ${body.genre !== undefined ? body.genre?.trim() || null : current.genre},
+        read = ${body.read !== undefined ? Boolean(body.read) : current.read},
+        bought = ${body.bought !== undefined ? Boolean(body.bought) : current.bought},
+        lent = ${body.lent !== undefined ? Boolean(body.lent) : current.lent},
+        lent_to = ${body.lent_to !== undefined
+          ? ((body.lent ?? current.lent) && body.lent_to?.trim() ? body.lent_to.trim() : null)
+          : current.lent_to},
+        notes = ${body.notes !== undefined ? body.notes?.trim() || null : current.notes},
+        wishlist = ${body.wishlist !== undefined ? Boolean(body.wishlist) : current.wishlist},
+        condition = ${body.condition !== undefined ? body.condition?.trim() || null : current.condition},
+        hardcover = ${body.hardcover !== undefined ? Boolean(body.hardcover) : current.hardcover},
+        first_edition = ${body.first_edition !== undefined ? Boolean(body.first_edition) : current.first_edition},
+        rating = ${body.rating !== undefined ? body.rating ?? null : current.rating}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Update book failed', error);
+    return NextResponse.json({ error: 'Failed to update book' }, { status: 500 });
   }
-
-  const updateData: any = {};
-  if (title !== undefined) updateData.title = title.trim();
-  if (author !== undefined) updateData.author = author.trim();
-  if (isbn !== undefined) updateData.isbn = isbn?.trim() || null;
-  if (genre !== undefined) updateData.genre = genre?.trim() || null;
-  if (read !== undefined) updateData.read = read;
-  if (bought !== undefined) updateData.bought = bought;
-  if (lent !== undefined) updateData.lent = lent;
-  if (lent_to !== undefined) updateData.lent_to = lent && lent_to?.trim() ? lent_to.trim() : null;
-  if (notes !== undefined) updateData.notes = notes?.trim() || null;
-  if (wishlist !== undefined) updateData.wishlist = wishlist;
-  if (condition !== undefined) updateData.condition = condition?.trim() || null;
-  if (hardcover !== undefined) updateData.hardcover = hardcover;
-  if (first_edition !== undefined) updateData.first_edition = first_edition;
-  if (rating !== undefined) updateData.rating = rating ?? null;
-
-  const { data, error } = await supabase
-    .from('books')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data);
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
   const { id } = await params;
 
-  const { error } = await supabase
-    .from('books')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    await sql`DELETE FROM books WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete book failed', error);
+    return NextResponse.json({ error: 'Failed to delete book' }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true });
 }

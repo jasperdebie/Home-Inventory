@@ -1,16 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import { isValidType, upsertLibraryItem } from '../../helpers';
 
-// PATCH — item bewerken
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = await createClient();
   const body = await request.json();
-
   const { name, type, comment, ingredients, saveToLibrary } = body;
 
   if (!name?.trim()) {
@@ -20,48 +17,50 @@ export async function PATCH(
     return NextResponse.json({ error: 'Ongeldig type' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from('food_diary_items')
-    .update({
-      name: name.trim(),
-      type,
-      comment: comment?.trim() || null,
-      ingredients: ingredients?.trim() || null,
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    const [row] = await sql`
+      UPDATE food_diary_items
+      SET
+        name = ${name.trim()},
+        type = ${type},
+        comment = ${comment?.trim() || null},
+        ingredients = ${ingredients?.trim() || null}
+      WHERE id = ${id}
+      RETURNING *
+    `;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!row) {
+      return NextResponse.json({ error: 'Item niet gevonden' }, { status: 404 });
+    }
+
+    if (saveToLibrary) {
+      await upsertLibraryItem({ name, type, comment, ingredients });
+    }
+
+    return NextResponse.json({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      comment: row.comment ?? undefined,
+      ingredients: row.ingredients ?? undefined,
+    });
+  } catch (error) {
+    console.error('Update food diary item failed', error);
+    return NextResponse.json({ error: 'Item bijwerken mislukt' }, { status: 500 });
   }
-
-  if (saveToLibrary) {
-    await upsertLibraryItem(supabase, { name, type, comment, ingredients });
-  }
-
-  return NextResponse.json({
-    id: data.id,
-    name: data.name,
-    type: data.type,
-    comment: data.comment ?? undefined,
-    ingredients: data.ingredients ?? undefined,
-  });
 }
 
-// DELETE — item verwijderen
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { error } = await supabase.from('food_diary_items').delete().eq('id', id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    await sql`DELETE FROM food_diary_items WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete food diary item failed', error);
+    return NextResponse.json({ error: 'Item verwijderen mislukt' }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true });
 }

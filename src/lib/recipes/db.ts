@@ -82,7 +82,7 @@ export async function loadRecipes(recipeId?: string) {
     `,
   ]);
 
-  const ingredientsByRecipe = new Map<string, typeof ingredients>();
+  const ingredientsByRecipe = new Map<string, Array<(typeof ingredients)[number]>>();
   for (const row of ingredients) {
     const key = row.recipe_id as string;
     const list = ingredientsByRecipe.get(key) ?? [];
@@ -90,7 +90,7 @@ export async function loadRecipes(recipeId?: string) {
     ingredientsByRecipe.set(key, list);
   }
 
-  const equipmentByRecipe = new Map<string, typeof equipment>();
+  const equipmentByRecipe = new Map<string, Array<(typeof equipment)[number]>>();
   for (const row of equipment) {
     const key = row.recipe_id as string;
     const list = equipmentByRecipe.get(key) ?? [];
@@ -98,7 +98,7 @@ export async function loadRecipes(recipeId?: string) {
     equipmentByRecipe.set(key, list);
   }
 
-  const componentsByRecipe = new Map<string, typeof components>();
+  const componentsByRecipe = new Map<string, Array<(typeof components)[number]>>();
   for (const row of components) {
     const key = row.recipe_id as string;
     const list = componentsByRecipe.get(key) ?? [];

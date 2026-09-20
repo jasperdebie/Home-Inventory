@@ -11,7 +11,15 @@ export async function GET(
 
   try {
     const [person] = await sql`
-      SELECT p.*, g.name AS group_name
+      SELECT
+        p.id,
+        p.name,
+        p.group_id,
+        p.birthday::text AS birthday,
+        p.birthday_has_year,
+        p.notes,
+        p.created_at,
+        g.name AS group_name
       FROM people p
       LEFT JOIN people_groups g ON g.id = p.group_id
       WHERE p.id = ${id}
@@ -23,7 +31,9 @@ export async function GET(
 
     const [reminders, giftIdeas] = await Promise.all([
       sql`
-        SELECT *
+        SELECT
+          id, person_id, type, text, due_date::text AS due_date,
+          recurs_annually, done, done_at, sort_order, created_at
         FROM people_reminders
         WHERE person_id = ${id}
         ORDER BY sort_order ASC, created_at ASC

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Category } from '@/lib/supabase/types';
 
 export function useCategories() {
@@ -9,23 +8,18 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-
-    async function fetch() {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order');
-
-      if (error) {
+    async function load() {
+      try {
+        const res = await fetch('/api/categories');
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        setCategories(await res.json());
+      } catch (error) {
         console.error('Error fetching categories:', error);
-      } else {
-        setCategories(data || []);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-
-    fetch();
+    load();
   }, []);
 
   return { categories, loading };

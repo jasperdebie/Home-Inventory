@@ -1,32 +1,43 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
   const body = await request.json();
 
-  const update: Record<string, unknown> = {};
-  if ('text' in body) {
-    if (!body.text?.trim()) return NextResponse.json({ error: 'Tekst is verplicht' }, { status: 400 });
-    update.text = body.text.trim();
-  }
-  if ('given' in body) {
-    update.given = !!body.given;
-    update.given_at = body.given ? new Date().toISOString() : null;
+  if ('text' in body && !body.text?.trim()) {
+    return NextResponse.json({ error: 'Tekst is verplicht' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from('people_gift_ideas')
-    .update(update)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  try {
+    const [current] = await sql`SELECT * FROM people_gift_ideas WHERE id = ${id}`;
+    if (!current) {
+      return NextResponse.json({ error: 'Cadeau-idee niet gevonden' }, { status: 404 });
+    }
+
+    const nextGiven = 'given' in body ? Boolean(body.given) : current.given;
+    const nextGivenAt = 'given' in body
+      ? (body.given ? new Date() : null)
+      : current.given_at;
+
+    const [row] = await sql`
+      UPDATE people_gift_ideas
+      SET
+        text = ${'text' in body ? body.text.trim() : current.text},
+        given = ${nextGiven},
+        given_at = ${nextGivenAt}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Update gift idea failed', error);
+    return NextResponse.json({ error: 'Failed to update gift idea' }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -34,8 +45,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { error } = await supabase.from('people_gift_ideas').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+
+  try {
+    await sql`DELETE FROM people_gift_ideas WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete gift idea failed', error);
+    return NextResponse.json({ error: 'Failed to delete gift idea' }, { status: 500 });
+  }
 }

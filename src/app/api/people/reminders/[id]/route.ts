@@ -19,7 +19,7 @@ export async function PATCH(
   }
 
   try {
-    const [current] = await sql`SELECT * FROM people_reminders WHERE id = ${id}`;
+    const [current] = await sql`SELECT id, person_id, type, text, due_date::text AS due_date, recurs_annually, done, done_at, sort_order, created_at FROM people_reminders WHERE id = ${id}`;
     if (!current) {
       return NextResponse.json({ error: 'Herinnering niet gevonden' }, { status: 404 });
     }
@@ -31,7 +31,7 @@ export async function PATCH(
 
     if ('done' in body) {
       if (body.done === true) {
-        const currentDueDate = current.due_date ? String(current.due_date) : null;
+        const currentDueDate = current.due_date as string | null;
         if (current.type === 'event' && current.recurs_annually && currentDueDate) {
           nextDueDate = rollForwardAnnual(currentDueDate, new Date());
           nextDone = false;

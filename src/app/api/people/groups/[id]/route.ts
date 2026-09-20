@@ -1,25 +1,29 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
   const body = await request.json();
-  const { name } = body;
-  if (!name?.trim()) {
+
+  if (!body.name?.trim()) {
     return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 });
   }
-  const { data, error } = await supabase
-    .from('people_groups')
-    .update({ name: name.trim() })
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  try {
+    const [row] = await sql`
+      UPDATE people_groups
+      SET name = ${body.name.trim()}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Update people group failed', error);
+    return NextResponse.json({ error: 'Failed to update group' }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -27,9 +31,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  // Personen behouden; group_id wordt NULL via ON DELETE SET NULL.
-  const { error } = await supabase.from('people_groups').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+
+  try {
+    await sql`DELETE FROM people_groups WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete people group failed', error);
+    return NextResponse.json({ error: 'Failed to delete group' }, { status: 500 });
+  }
 }

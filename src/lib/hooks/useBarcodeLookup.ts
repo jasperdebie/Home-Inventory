@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { ProductWithCategory } from '@/lib/supabase/types';
 
 interface OpenFoodFactsResult {
@@ -11,22 +10,17 @@ interface OpenFoodFactsResult {
 
 export function useBarcodeLookup() {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
-
   const lookupBarcode = useCallback(
     async (barcode: string): Promise<{ product?: ProductWithCategory; suggestion?: OpenFoodFactsResult }> => {
       setLoading(true);
       try {
-        // First, check local DB
-        const { data: existingProduct } = await supabase
-          .from('products')
-          .select('*, category:categories(*)')
-          .eq('barcode', barcode)
-          .eq('is_archived', false)
-          .single();
-
-        if (existingProduct) {
-          return { product: existingProduct };
+        // First, check local PostgreSQL database through our API.
+        const localRes = await fetch(`/api/products?barcode=${encodeURIComponent(barcode)}`);
+        if (localRes.ok) {
+          const rows: ProductWithCategory[] = await localRes.json();
+          if (rows[0]) {
+            return { product: rows[0] };
+          }
         }
 
         // If not found locally, try OpenFoodFacts
@@ -47,7 +41,7 @@ export function useBarcodeLookup() {
         setLoading(false);
       }
     },
-    [supabase]
+    []
   );
 
   return { lookupBarcode, loading };

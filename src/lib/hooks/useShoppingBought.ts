@@ -1,39 +1,34 @@
 'use client';
 
 import { useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 export function useShoppingBought() {
-  const supabase = createClient();
-
   const toggleChecked = useCallback(
     async (itemId: string, isGroup: boolean, currentlyChecked: boolean) => {
-      const table = isGroup ? 'product_groups' : 'products';
-      const { error } = await supabase
-        .from(table)
-        .update({ is_bought: !currentlyChecked })
-        .eq('id', itemId);
-
-      if (error) {
-        console.error('Error toggling bought status:', error);
-      }
+      const endpoint = isGroup ? `/api/product-groups/${itemId}` : `/api/products/${itemId}`;
+      const res = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_bought: !currentlyChecked }),
+      });
+      if (!res.ok) console.error('Error toggling bought status');
     },
-    [supabase]
+    []
   );
 
   const clearAll = useCallback(
     async (items: Array<{ id: string; isGroup: boolean }>) => {
-      const productIds = items.filter(i => !i.isGroup).map(i => i.id);
-      const groupIds = items.filter(i => i.isGroup).map(i => i.id);
-
-      if (productIds.length > 0) {
-        await supabase.from('products').update({ is_bought: false }).in('id', productIds);
-      }
-      if (groupIds.length > 0) {
-        await supabase.from('product_groups').update({ is_bought: false }).in('id', groupIds);
-      }
+      await Promise.all(
+        items.map((item) =>
+          fetch(item.isGroup ? `/api/product-groups/${item.id}` : `/api/products/${item.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_bought: false }),
+          })
+        )
+      );
     },
-    [supabase]
+    []
   );
 
   return { toggleChecked, clearAll };

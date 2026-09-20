@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
+import { loadRecipes } from '@/lib/recipes/db';
 
 const VALID_CATEGORIES = ['hapje', 'voorgerecht', 'hoofdgerecht', 'tussendoortje', 'dessert', 'drankjes'] as const;
-
 const VALID_RATINGS = ['zeer_goed', 'goed', 'matig', 'minder', 'slecht'] as const;
 
 function isValidRating5(value: unknown): boolean {
@@ -10,82 +10,23 @@ function isValidRating5(value: unknown): boolean {
   return Number.isInteger(n) && n >= 1 && n <= 5;
 }
 
-const INGREDIENTS_QUERY = `
-  *,
-  recipe_ingredients (
-    *,
-    cookbook_product:cookbook_products (*)
-  ),
-  recipe_equipment (
-    *,
-    cookbook_equipment:cookbook_equipment (*)
-  ),
-  recipe_components!fk_recipe_components_parent (
-    *,
-    child_recipe:recipes!fk_recipe_components_child (
-      id, title, category, servings, prep_time, image_url
-    )
-  )
-` as const;
-
-async function upsertCookbookProduct(supabase: Awaited<ReturnType<typeof createClient>>, name: string) {
-  const normalized = name.trim().toLowerCase();
-  const { data: existing } = await supabase
-    .from('cookbook_products')
-    .select('id')
-    .eq('name_normalized', normalized)
-    .maybeSingle();
-
-  if (existing) return existing.id as string;
-
-  const { data: created } = await supabase
-    .from('cookbook_products')
-    .insert([{ name: name.trim(), name_normalized: normalized }])
-    .select('id')
-    .single();
-
-  return created?.id as string | null;
-}
-
-async function upsertCookbookEquipment(supabase: Awaited<ReturnType<typeof createClient>>, name: string) {
-  const normalized = name.trim().toLowerCase();
-  const { data: existing } = await supabase
-    .from('cookbook_equipment')
-    .select('id')
-    .eq('name_normalized', normalized)
-    .maybeSingle();
-
-  if (existing) return existing.id as string;
-
-  const { data: created } = await supabase
-    .from('cookbook_equipment')
-    .insert([{ name: name.trim(), name_normalized: normalized }])
-    .select('id')
-    .single();
-
-  return created?.id as string | null;
-}
-
 export async function GET() {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from('recipes')
-    .select(INGREDIENTS_QUERY)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    return NextResponse.json(await loadRecipes());
+  } catch (error) {
+    console.error('Recipes query failed', error);
+    return NextResponse.json({ error: 'Recepten laden mislukt' }, { status: 500 });
   }
-
-  return NextResponse.json(data);
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
   const body = await request.json();
 
-  const { title, category, preparation, servings, prep_time, extra_time, extra_time_label, image_url, tags, source, notes, storage, is_favorite, is_made, rating, star_rating, health_rating, ingredients, equipment, components } = body;
+  const {
+    title, category, preparation, servings, prep_time, extra_time, extra_time_label,
+    image_url, tags, source, notes, storage, is_favorite, is_made, rating,
+    star_rating, health_rating, ingredients, equipment, components,
+  } = body;
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Titel is verplicht' }, { status: 400 });
@@ -103,112 +44,125 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Ongeldige gezondheidsbeoordeling' }, { status: 400 });
   }
 
-  const { data: recipe, error: recipeError } = await supabase
-    .from('recipes')
-    .insert([{
-      title: title.trim(),
-      category,
-      preparation: preparation?.trim() ?? '',
-      servings: Number(servings) || 4,
-      prep_time: prep_time ? Number(prep_time) : null,
-      extra_time: extra_time?.trim() || null,
-      extra_time_label: extra_time_label?.trim() || null,
-      image_url: image_url?.trim() || null,
-      tags: Array.isArray(tags) ? tags : [],
-      source: source?.trim() || null,
-      notes: notes?.trim() || null,
-      storage: storage?.trim() || null,
-      is_favorite: Boolean(is_favorite),
-      is_made: Boolean(is_made),
-      rating: rating || null,
-      star_rating: star_rating != null ? Number(star_rating) : null,
-      health_rating: health_rating != null ? Number(health_rating) : null,
-    }])
-    .select()
-    .single();
+  try {
+    const recipeId = await sql.begin(async (tx) => {
+      const recipeTags = Array.isArray(tags) ? tags.map(String) : [];
 
-  if (recipeError) {
-    return NextResponse.json({ error: recipeError.message }, { status: 500 });
-  }
+      const [recipe] = await tx`
+        INSERT INTO recipes (
+          title, category, preparation, servings, prep_time, extra_time,
+          extra_time_label, image_url, tags, source, notes, storage,
+          is_favorite, is_made, rating, star_rating, health_rating
+        )
+        VALUES (
+          ${title.trim()},
+          ${category},
+          ${preparation?.trim() ?? ''},
+          ${Number(servings) || 4},
+          ${prep_time ? Number(prep_time) : null},
+          ${extra_time?.trim() || null},
+          ${extra_time_label?.trim() || null},
+          ${image_url?.trim() || null},
+          ${tx.array(recipeTags)},
+          ${source?.trim() || null},
+          ${notes?.trim() || null},
+          ${storage?.trim() || null},
+          ${Boolean(is_favorite)},
+          ${Boolean(is_made)},
+          ${rating || null},
+          ${star_rating != null ? Number(star_rating) : null},
+          ${health_rating != null ? Number(health_rating) : null}
+        )
+        RETURNING id
+      `;
 
-  if (Array.isArray(ingredients) && ingredients.length > 0) {
-    const rows = await Promise.all(
-      ingredients
-        .filter((ing: { name?: string }) => ing.name?.trim())
-        .map(async (ing: { name: string; cookbook_product_id?: string | null; quantity?: number | null; unit?: string | null }, index: number) => {
-          const productId = ing.cookbook_product_id
-            ?? await upsertCookbookProduct(supabase, ing.name);
-          return {
-            recipe_id: recipe.id,
-            cookbook_product_id: productId ?? null,
-            name: ing.name.trim(),
-            quantity: ing.quantity ?? null,
-            unit: ing.unit?.trim() || null,
-            sort_order: index,
-          };
-        })
-    );
+      if (Array.isArray(ingredients)) {
+        let sortOrder = 0;
+        for (const ing of ingredients) {
+          if (!ing?.name?.trim()) continue;
 
-    if (rows.length > 0) {
-      const { error: ingError } = await supabase.from('recipe_ingredients').insert(rows);
-      if (ingError) {
-        return NextResponse.json({ error: ingError.message }, { status: 500 });
+          let productId = ing.cookbook_product_id || null;
+          if (!productId) {
+            const normalized = ing.name.trim().toLowerCase();
+            const [product] = await tx`
+              INSERT INTO cookbook_products (name, name_normalized)
+              VALUES (${ing.name.trim()}, ${normalized})
+              ON CONFLICT (name_normalized)
+              DO UPDATE SET name = cookbook_products.name
+              RETURNING id
+            `;
+            productId = product.id;
+          }
+
+          await tx`
+            INSERT INTO recipe_ingredients (
+              recipe_id, cookbook_product_id, name, quantity, unit, sort_order
+            )
+            VALUES (
+              ${recipe.id}, ${productId}, ${ing.name.trim()},
+              ${ing.quantity ?? null}, ${ing.unit?.trim() || null}, ${sortOrder}
+            )
+          `;
+          sortOrder += 1;
+        }
       }
-    }
-  }
 
-  if (Array.isArray(equipment) && equipment.length > 0) {
-    const rows = await Promise.all(
-      equipment
-        .filter((eq: { name?: string }) => eq.name?.trim())
-        .map(async (eq: { name: string; cookbook_equipment_id?: string | null; quantity?: number | null }, index: number) => {
-          const equipmentId = eq.cookbook_equipment_id
-            ?? await upsertCookbookEquipment(supabase, eq.name);
-          return {
-            recipe_id: recipe.id,
-            cookbook_equipment_id: equipmentId ?? null,
-            name: eq.name.trim(),
-            quantity: eq.quantity ?? null,
-            sort_order: index,
-          };
-        })
-    );
+      if (Array.isArray(equipment)) {
+        let sortOrder = 0;
+        for (const eq of equipment) {
+          if (!eq?.name?.trim()) continue;
 
-    if (rows.length > 0) {
-      const { error: eqError } = await supabase.from('recipe_equipment').insert(rows);
-      if (eqError) {
-        return NextResponse.json({ error: eqError.message }, { status: 500 });
+          let equipmentId = eq.cookbook_equipment_id || null;
+          if (!equipmentId) {
+            const normalized = eq.name.trim().toLowerCase();
+            const [equipmentRow] = await tx`
+              INSERT INTO cookbook_equipment (name, name_normalized)
+              VALUES (${eq.name.trim()}, ${normalized})
+              ON CONFLICT (name_normalized)
+              DO UPDATE SET name = cookbook_equipment.name
+              RETURNING id
+            `;
+            equipmentId = equipmentRow.id;
+          }
+
+          await tx`
+            INSERT INTO recipe_equipment (
+              recipe_id, cookbook_equipment_id, name, quantity, sort_order
+            )
+            VALUES (
+              ${recipe.id}, ${equipmentId}, ${eq.name.trim()},
+              ${eq.quantity ?? null}, ${sortOrder}
+            )
+          `;
+          sortOrder += 1;
+        }
       }
-    }
-  }
 
-  if (Array.isArray(components) && components.length > 0) {
-    const rows = components
-      .filter((c: { child_recipe_id?: string }) => c.child_recipe_id)
-      .map((c: { child_recipe_id: string; label?: string | null }, index: number) => ({
-        recipe_id: recipe.id,
-        child_recipe_id: c.child_recipe_id,
-        label: c.label?.trim() || null,
-        sort_order: index,
-      }));
-
-    if (rows.length > 0) {
-      const { error: compError } = await supabase.from('recipe_components').insert(rows);
-      if (compError) {
-        return NextResponse.json({ error: compError.message }, { status: 500 });
+      if (Array.isArray(components)) {
+        let sortOrder = 0;
+        for (const component of components) {
+          if (!component?.child_recipe_id) continue;
+          await tx`
+            INSERT INTO recipe_components (
+              recipe_id, child_recipe_id, label, sort_order
+            )
+            VALUES (
+              ${recipe.id}, ${component.child_recipe_id},
+              ${component.label?.trim() || null}, ${sortOrder}
+            )
+            ON CONFLICT (recipe_id, child_recipe_id) DO NOTHING
+          `;
+          sortOrder += 1;
+        }
       }
-    }
+
+      return recipe.id as string;
+    });
+
+    const [full] = await loadRecipes(recipeId);
+    return NextResponse.json(full, { status: 201 });
+  } catch (error) {
+    console.error('Create recipe failed', error);
+    return NextResponse.json({ error: 'Recept aanmaken mislukt' }, { status: 500 });
   }
-
-  const { data: full, error: fullError } = await supabase
-    .from('recipes')
-    .select(INGREDIENTS_QUERY)
-    .eq('id', recipe.id)
-    .single();
-
-  if (fullError) {
-    return NextResponse.json({ error: fullError.message }, { status: 500 });
-  }
-
-  return NextResponse.json(full, { status: 201 });
 }

@@ -1,26 +1,28 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const { searchParams } = new URL(request.url);
-  const q = searchParams.get('q')?.trim().toLowerCase() ?? '';
+  const q = request.nextUrl.searchParams.get('q')?.trim().toLowerCase() ?? '';
 
-  let query = supabase
-    .from('cookbook_equipment')
-    .select('*')
-    .order('name', { ascending: true })
-    .limit(20);
+  try {
+    const rows = q
+      ? await sql`
+          SELECT *
+          FROM cookbook_equipment
+          WHERE name_normalized ILIKE ${'%' + q + '%'}
+          ORDER BY name ASC
+          LIMIT 20
+        `
+      : await sql`
+          SELECT *
+          FROM cookbook_equipment
+          ORDER BY name ASC
+          LIMIT 20
+        `;
 
-  if (q) {
-    query = query.ilike('name_normalized', `%${q}%`);
+    return NextResponse.json(rows);
+  } catch (error) {
+    console.error('Cookbook equipment query failed', error);
+    return NextResponse.json({ error: 'Failed to load cookbook equipment' }, { status: 500 });
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data ?? []);
 }

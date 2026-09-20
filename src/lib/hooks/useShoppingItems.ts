@@ -1,42 +1,27 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { ShoppingItem } from '@/lib/supabase/types';
 
 export function useShoppingItems() {
-  const supabase = createClient();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchItems = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('shopping_items')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (error) {
+    try {
+      const res = await fetch('/api/shopping-items');
+      if (!res.ok) throw new Error('Failed to fetch shopping items');
+      setItems(await res.json());
+    } catch (error) {
       console.error('Error fetching shopping items:', error);
-    } else {
-      setItems(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchItems();
-
-    const channel = supabase
-      .channel('shopping_items_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, () => {
-        fetchItems();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase, fetchItems]);
+  }, [fetchItems]);
 
   const addItem = useCallback(async (name: string) => {
     const trimmed = name.trim();
@@ -50,46 +35,35 @@ export function useShoppingItems() {
     };
     setItems((prev) => [...prev, optimistic]);
 
-    const { error } = await supabase
-      .from('shopping_items')
-      .insert({ name: trimmed });
+    const res = await fetch('/api/shopping-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: trimmed }),
+    });
 
-    if (error) {
-      console.error('Error adding shopping item:', error);
+    if (!res.ok) {
       setItems((prev) => prev.filter((i) => i.id !== optimistic.id));
-    } else {
-      fetchItems();
+      return;
     }
-  }, [supabase, fetchItems]);
+    await fetchItems();
+  }, [fetchItems]);
 
   const toggleItem = useCallback(async (id: string, currentlyChecked: boolean) => {
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_checked: !currentlyChecked } : i));
-
-    const { error } = await supabase
-      .from('shopping_items')
-      .update({ is_checked: !currentlyChecked })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error toggling shopping item:', error);
-      setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_checked: currentlyChecked } : i));
-    }
-  }, [supabase]);
+    const res = await fetch(`/api/shopping-items/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_checked: !currentlyChecked }),
+    });
+    if (!res.ok) await fetchItems();
+  }, [fetchItems]);
 
   const deleteItem = useCallback(async (id: string) => {
     const prev = items;
     setItems((curr) => curr.filter((i) => i.id !== id));
-
-    const { error } = await supabase
-      .from('shopping_items')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting shopping item:', error);
-      setItems(prev);
-    }
-  }, [supabase, items]);
+    const res = await fetch(`/api/shopping-items/${id}`, { method: 'DELETE' });
+    if (!res.ok) setItems(prev);
+  }, [items]);
 
   return { items, loading, addItem, toggleItem, deleteItem };
 }

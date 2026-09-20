@@ -1,66 +1,58 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { ProductGroup } from '@/lib/supabase/types';
 
 export function useProductGroups() {
   const [groups, setGroups] = useState<ProductGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   const fetchGroups = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('product_groups')
-      .select('*')
-      .order('name');
-
-    if (error) {
+    try {
+      const res = await fetch('/api/product-groups');
+      if (!res.ok) throw new Error('Failed to fetch product groups');
+      setGroups(await res.json());
+    } catch (error) {
       console.error('Error fetching product groups:', error);
-    } else {
-      setGroups(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchGroups();
-
-    const channel = supabase
-      .channel('product-groups-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_groups' }, () => fetchGroups())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchGroups, supabase]);
+  }, [fetchGroups]);
 
   const createGroup = useCallback(async (group: { name: string; min_stock?: number }) => {
-    const { data, error } = await supabase
-      .from('product_groups')
-      .insert({ name: group.name, min_stock: group.min_stock ?? 1 })
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }, [supabase]);
-
-  const updateGroup = useCallback(async (id: string, updates: Partial<Pick<ProductGroup, 'name' | 'min_stock' | 'extra_needed' | 'is_low_prio'>>) => {
-    const { error } = await supabase
-      .from('product_groups')
-      .update(updates)
-      .eq('id', id);
-    if (error) throw error;
+    const res = await fetch('/api/product-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(group),
+    });
+    if (!res.ok) throw new Error('Failed to create product group');
+    const data = await res.json();
     await fetchGroups();
-  }, [supabase, fetchGroups]);
+    return data;
+  }, [fetchGroups]);
+
+  const updateGroup = useCallback(async (
+    id: string,
+    updates: Partial<Pick<ProductGroup, 'name' | 'min_stock' | 'extra_needed' | 'is_low_prio' | 'is_bought'>>
+  ) => {
+    const res = await fetch(`/api/product-groups/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Failed to update product group');
+    await fetchGroups();
+  }, [fetchGroups]);
 
   const deleteGroup = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('product_groups')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    const res = await fetch(`/api/product-groups/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete product group');
     setGroups(prev => prev.filter(g => g.id !== id));
-  }, [supabase]);
+  }, []);
 
   return { groups, loading, createGroup, updateGroup, deleteGroup, refetch: fetchGroups };
 }

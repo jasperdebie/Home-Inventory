@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -8,38 +8,46 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const [personRes, remindersRes, giftsRes] = await Promise.all([
-    supabase.from('people').select('*, people_groups(name)').eq('id', id).maybeSingle(),
-    supabase
-      .from('people_reminders')
-      .select('*')
-      .eq('person_id', id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('people_gift_ideas')
-      .select('*')
-      .eq('person_id', id)
-      .order('created_at', { ascending: true }),
-  ]);
+  try {
+    const [person] = await sql`
+      SELECT p.*, g.name AS group_name
+      FROM people p
+      LEFT JOIN people_groups g ON g.id = p.group_id
+      WHERE p.id = ${id}
+    `;
 
-  if (personRes.error) return NextResponse.json({ error: personRes.error.message }, { status: 500 });
-  if (!personRes.data) return NextResponse.json({ error: 'Persoon niet gevonden' }, { status: 404 });
-  if (remindersRes.error) return NextResponse.json({ error: remindersRes.error.message }, { status: 500 });
-  if (giftsRes.error) return NextResponse.json({ error: giftsRes.error.message }, { status: 500 });
+    if (!person) {
+      return NextResponse.json({ error: 'Persoon niet gevonden' }, { status: 404 });
+    }
 
-  const { people_groups, ...person } = personRes.data as Record<string, unknown> & {
-    people_groups: { name: string } | null;
-  };
+    const [reminders, giftIdeas] = await Promise.all([
+      sql`
+        SELECT *
+        FROM people_reminders
+        WHERE person_id = ${id}
+        ORDER BY sort_order ASC, created_at ASC
+      `,
+      sql`
+        SELECT *
+        FROM people_gift_ideas
+        WHERE person_id = ${id}
+        ORDER BY created_at ASC
+      `,
+    ]);
 
-  return NextResponse.json({
-    person,
-    group_name: people_groups?.name ?? null,
-    reminders: remindersRes.data ?? [],
-    giftIdeas: giftsRes.data ?? [],
-  });
+    const { group_name, ...personData } = person;
+
+    return NextResponse.json({
+      person: personData,
+      group_name: group_name ?? null,
+      reminders,
+      giftIdeas,
+    });
+  } catch (error) {
+    console.error('Person query failed', error);
+    return NextResponse.json({ error: 'Failed to load person' }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -47,33 +55,38 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
   const body = await request.json();
 
-  const update: Record<string, unknown> = {};
-  if ('name' in body) {
-    if (!body.name?.trim()) return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 });
-    update.name = body.name.trim();
+  if ('name' in body && !body.name?.trim()) {
+    return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 });
   }
-  if ('group_id' in body) update.group_id = body.group_id || null;
-  if ('notes' in body) update.notes = body.notes?.trim() || null;
-  if ('birthday' in body) {
-    if (body.birthday && !DATE_RE.test(body.birthday)) {
-      return NextResponse.json({ error: 'Ongeldige verjaardag' }, { status: 400 });
+  if ('birthday' in body && body.birthday && !DATE_RE.test(body.birthday)) {
+    return NextResponse.json({ error: 'Ongeldige verjaardag' }, { status: 400 });
+  }
+
+  try {
+    const [current] = await sql`SELECT * FROM people WHERE id = ${id}`;
+    if (!current) {
+      return NextResponse.json({ error: 'Persoon niet gevonden' }, { status: 404 });
     }
-    update.birthday = body.birthday || null;
+
+    const [row] = await sql`
+      UPDATE people
+      SET
+        name = ${'name' in body ? body.name.trim() : current.name},
+        group_id = ${'group_id' in body ? body.group_id || null : current.group_id},
+        notes = ${'notes' in body ? body.notes?.trim() || null : current.notes},
+        birthday = ${'birthday' in body ? body.birthday || null : current.birthday},
+        birthday_has_year = ${'birthday_has_year' in body ? Boolean(body.birthday_has_year) : current.birthday_has_year}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return NextResponse.json(row);
+  } catch (error) {
+    console.error('Update person failed', error);
+    return NextResponse.json({ error: 'Failed to update person' }, { status: 500 });
   }
-  if ('birthday_has_year' in body) update.birthday_has_year = !!body.birthday_has_year;
-
-  const { data, error } = await supabase
-    .from('people')
-    .update(update)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
 }
 
 export async function DELETE(
@@ -81,9 +94,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  // Reminders en gift ideas verdwijnen mee via ON DELETE CASCADE.
-  const { error } = await supabase.from('people').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+
+  try {
+    await sql`DELETE FROM people WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete person failed', error);
+    return NextResponse.json({ error: 'Failed to delete person' }, { status: 500 });
+  }
 }

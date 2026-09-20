@@ -4,7 +4,6 @@ import { useMemo, useCallback } from 'react';
 import { useShoppingList } from '@/lib/hooks/useShoppingList';
 import { useShoppingBought } from '@/lib/hooks/useShoppingBought';
 import { useShoppingItems } from '@/lib/hooks/useShoppingItems';
-import { createClient } from '@/lib/supabase/client';
 import { ShoppingList } from '@/components/shopping/ShoppingList';
 import { AdHocShoppingList } from '@/components/shopping/AdHocShoppingList';
 import { Spinner } from '@/components/ui/Spinner';
@@ -37,14 +36,22 @@ export default function ShoppingListPage() {
     try {
       await addStockChange(productId, quantity, 'add', 'Bought from shopping list');
 
-      // Reset extra_needed on the shopping list item (product or group) that was bought
-      const supabase = createClient();
+      // Reset extra_needed on the shopping list item (product or group) that was bought.
       const allItems = [...groups, ...lowPrioGroups].flatMap(g => g.items);
-      const item = allItems.find(i => i.targetProductId === productId || (i.isGroup && i.groupMembers?.some(m => m.id === productId)));
-      if (item && item.isGroup) {
-        await supabase.from('product_groups').update({ extra_needed: 0 }).eq('id', item.id);
-      } else if (item) {
-        await supabase.from('products').update({ extra_needed: 0 }).eq('id', item.id);
+      const item = allItems.find(i =>
+        i.targetProductId === productId ||
+        (i.isGroup && i.groupMembers?.some(m => m.id === productId))
+      );
+      if (item) {
+        const endpoint = item.isGroup
+          ? `/api/product-groups/${item.id}`
+          : `/api/products/${item.id}`;
+        const res = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extra_needed: 0 }),
+        });
+        if (!res.ok) throw new Error('Failed to reset extra needed');
       }
 
       toast(`Added ${quantity} to stock`);
@@ -54,15 +61,24 @@ export default function ShoppingListPage() {
   };
 
   const handleToggleLowPrio = useCallback(async (id: string, isGroup: boolean) => {
-    const supabase = createClient();
-    const table = isGroup ? 'product_groups' : 'products';
-    const { data } = await supabase.from(table).select('is_low_prio').eq('id', id).single();
-    if (!data) return;
-    const { error } = await supabase.from(table).update({ is_low_prio: !data.is_low_prio }).eq('id', id);
-    if (error) {
+    const currentlyLowPrio = lowPrioGroups
+      .flatMap((g) => g.items)
+      .some((item) => item.id === id);
+
+    const endpoint = isGroup
+      ? `/api/product-groups/${id}`
+      : `/api/products/${id}`;
+
+    const res = await fetch(endpoint, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_low_prio: !currentlyLowPrio }),
+    });
+
+    if (!res.ok) {
       toast('Failed to update priority', 'error');
     }
-  }, [toast]);
+  }, [lowPrioGroups, toast]);
 
   const handleClearAll = () => {
     const boughtItems = [...groups, ...lowPrioGroups]

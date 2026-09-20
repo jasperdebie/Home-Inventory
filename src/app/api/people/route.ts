@@ -6,8 +6,8 @@ export async function GET() {
   try {
     const [groups, peopleRows, reminders] = await Promise.all([
       sql`SELECT * FROM people_groups ORDER BY name ASC`,
-      sql`SELECT * FROM people ORDER BY name ASC`,
-      sql`SELECT * FROM people_reminders WHERE done = FALSE`,
+      sql`SELECT id, name, group_id, birthday::text AS birthday, birthday_has_year, notes, created_at FROM people ORDER BY name ASC`,
+      sql`SELECT id, person_id, type, text, due_date::text AS due_date, recurs_annually, done, done_at, sort_order, created_at FROM people_reminders WHERE done = FALSE`,
     ]);
 
     const groupNameById = new Map(groups.map((g) => [g.id as string, g.name as string]));
@@ -29,7 +29,7 @@ export async function GET() {
         dated_items.push({
           kind: 'birthday',
           label: 'Verjaardag',
-          date: String(p.birthday),
+          date: p.birthday as string,
           recurring: true,
         });
       }
@@ -52,7 +52,7 @@ export async function GET() {
         name: p.name,
         group_id: p.group_id,
         group_name: p.group_id ? groupNameById.get(p.group_id) ?? null : null,
-        birthday: p.birthday ? String(p.birthday) : null,
+        birthday: (p.birthday as string | null) ?? null,
         birthday_has_year: p.birthday_has_year,
         notes: p.notes,
         created_at: p.created_at,

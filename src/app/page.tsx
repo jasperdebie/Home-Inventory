@@ -7,7 +7,7 @@ export default function LandingPage() {
     <div className="min-h-[calc(100vh-2rem)] flex items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 text-center">Choose your app</h1>
-        <p className="text-center text-gray-600">Select where you want to continue.</p>
+        <p className="text-center text-gray-600">Select where you want to continue:</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link

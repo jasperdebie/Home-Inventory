@@ -1,12 +1,9 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import { isValidDate, isValidSlot, isValidType, upsertLibraryItem } from '../helpers';
 
-// POST — nieuw item loggen
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
   const body = await request.json();
-
   const { date, slot, name, type, comment, ingredients, saveToLibrary } = body;
 
   if (!isValidDate(date)) {
@@ -22,47 +19,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Ongeldig type' }, { status: 400 });
   }
 
-  // Volgende sort_order binnen dit eetmoment bepalen.
-  const { data: last } = await supabase
-    .from('food_diary_items')
-    .select('sort_order')
-    .eq('log_date', date)
-    .eq('slot', slot)
-    .order('sort_order', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    const [{ next_sort_order }] = await sql`
+      SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_sort_order
+      FROM food_diary_items
+      WHERE log_date = ${date} AND slot = ${slot}
+    `;
 
-  const sort_order = last ? (last.sort_order as number) + 1 : 0;
+    const [row] = await sql`
+      INSERT INTO food_diary_items (
+        log_date, slot, name, type, comment, ingredients, sort_order
+      )
+      VALUES (
+        ${date}, ${slot}, ${name.trim()}, ${type},
+        ${comment?.trim() || null}, ${ingredients?.trim() || null},
+        ${Number(next_sort_order)}
+      )
+      RETURNING *
+    `;
 
-  const { data, error } = await supabase
-    .from('food_diary_items')
-    .insert([
-      {
-        log_date: date,
-        slot,
-        name: name.trim(),
-        type,
-        comment: comment?.trim() || null,
-        ingredients: ingredients?.trim() || null,
-        sort_order,
-      },
-    ])
-    .select()
-    .single();
+    if (saveToLibrary) {
+      await upsertLibraryItem({ name, type, comment, ingredients });
+    }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      comment: row.comment ?? undefined,
+      ingredients: row.ingredients ?? undefined,
+    });
+  } catch (error) {
+    console.error('Create food diary item failed', error);
+    return NextResponse.json({ error: 'Item toevoegen mislukt' }, { status: 500 });
   }
-
-  if (saveToLibrary) {
-    await upsertLibraryItem(supabase, { name, type, comment, ingredients });
-  }
-
-  return NextResponse.json({
-    id: data.id,
-    name: data.name,
-    type: data.type,
-    comment: data.comment ?? undefined,
-    ingredients: data.ingredients ?? undefined,
-  });
 }

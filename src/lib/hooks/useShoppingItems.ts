@@ -65,5 +65,5 @@ export function useShoppingItems() {
     if (!res.ok) setItems(prev);
   }, [items]);
 
-  return { items, loading, addItem, toggleItem, deleteItem };
+  return { items, loading, addItem, toggleItem, deleteItem, refetch: fetchItems };
 }

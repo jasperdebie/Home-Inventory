@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useProducts } from './useProducts';
 import { useProductGroups } from './useProductGroups';
 import { ProductWithCategory } from '@/lib/supabase/types';
@@ -32,8 +32,12 @@ export interface ShoppingGroup {
 }
 
 export function useShoppingList() {
-  const { products, loading: productsLoading, addStockChange } = useProducts();
-  const { groups: productGroups, loading: groupsLoading } = useProductGroups();
+  const { products, loading: productsLoading, addStockChange, refetch: refetchProducts } = useProducts();
+  const { groups: productGroups, loading: groupsLoading, refetch: refetchGroups } = useProductGroups();
+
+  const refetch = useCallback(async () => {
+    await Promise.all([refetchProducts(), refetchGroups()]);
+  }, [refetchProducts, refetchGroups]);
 
   const shoppingGroups = useMemo(() => {
     const allItems: Array<ShoppingItem & { category: { id: string; name: string; icon: string; sort_order?: number } | null }> = [];
@@ -160,5 +164,5 @@ export function useShoppingList() {
   const totalLowPrio = shoppingGroups.lowPrio.reduce((sum, g) => sum + g.items.length, 0);
   const loading = productsLoading || groupsLoading;
 
-  return { groups: shoppingGroups.main, lowPrioGroups: shoppingGroups.lowPrio, totalItems, totalLowPrio, loading, addStockChange };
+  return { groups: shoppingGroups.main, lowPrioGroups: shoppingGroups.lowPrio, totalItems, totalLowPrio, loading, addStockChange, refetch };
 }

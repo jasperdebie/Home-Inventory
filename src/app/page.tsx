@@ -67,6 +67,12 @@ export default function LandingPage() {
             </div>
           </Link>
         </div>
+
+        <p className="text-center">
+          <Link href="/tv-dashboard" className="text-xs text-gray-400 hover:text-gray-600">
+            Tv-dashboard
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePeople } from '@/lib/hooks/usePeople';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { buildUpcoming, daysUntil } from '@/lib/people/shared';
@@ -84,15 +85,17 @@ export default function TvDashboardPage() {
                   ? birthdayAgeLabel(person.birthday, person.birthday_has_year, e.nextDate)
                   : '';
                 return (
-                  <li
-                    key={`b-${e.personId}-${i}`}
-                    className="flex items-center justify-between bg-slate-800 rounded-2xl px-6 py-4"
-                  >
-                    <span className="text-2xl font-semibold">
-                      {e.personName}
-                      {ageLabel}
-                    </span>
-                    <span className="text-xl text-rose-300 whitespace-nowrap">{relativeDayLabel(e.daysUntil)}</span>
+                  <li key={`b-${e.personId}-${i}`}>
+                    <Link
+                      href={`/people/${e.personId}`}
+                      className="flex items-center justify-between bg-slate-800 rounded-2xl px-6 py-4 hover:bg-slate-700 transition-colors"
+                    >
+                      <span className="text-2xl font-semibold">
+                        {e.personName}
+                        {ageLabel}
+                      </span>
+                      <span className="text-xl text-rose-300 whitespace-nowrap">{relativeDayLabel(e.daysUntil)}</span>
+                    </Link>
                   </li>
                 );
               })}
@@ -105,14 +108,16 @@ export default function TvDashboardPage() {
           ) : (
             <ul className="space-y-4">
               {bringReminders.map((e, i) => (
-                <li
-                  key={`r-${e.personId}-${i}`}
-                  className="flex items-center justify-between bg-slate-800 rounded-2xl px-6 py-4"
-                >
-                  <span className="text-2xl font-semibold">
-                    {e.label} <span className="text-slate-400 text-lg">— {e.personName}</span>
-                  </span>
-                  <span className="text-xl text-amber-300 whitespace-nowrap">{relativeDayLabel(e.daysUntil)}</span>
+                <li key={`r-${e.personId}-${i}`}>
+                  <Link
+                    href={`/people/${e.personId}`}
+                    className="flex items-center justify-between bg-slate-800 rounded-2xl px-6 py-4 hover:bg-slate-700 transition-colors"
+                  >
+                    <span className="text-2xl font-semibold">
+                      {e.label} <span className="text-slate-400 text-lg">— {e.personName}</span>
+                    </span>
+                    <span className="text-xl text-amber-300 whitespace-nowrap">{relativeDayLabel(e.daysUntil)}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -126,13 +131,18 @@ export default function TvDashboardPage() {
           ) : (
             <ul className="space-y-4">
               {expiring.map((p) => (
-                <li key={p.id} className="flex items-center justify-between bg-slate-800 rounded-2xl px-6 py-4">
-                  <span className="text-2xl font-semibold">{p.name}</span>
-                  <span
-                    className={`text-xl whitespace-nowrap ${p.daysLeft < 0 ? 'text-red-400' : 'text-amber-300'}`}
+                <li key={p.id}>
+                  <Link
+                    href={`/products/${p.id}`}
+                    className="flex items-center justify-between bg-slate-800 rounded-2xl px-6 py-4 hover:bg-slate-700 transition-colors"
                   >
-                    {relativeDayLabel(p.daysLeft)}
-                  </span>
+                    <span className="text-2xl font-semibold">{p.name}</span>
+                    <span
+                      className={`text-xl whitespace-nowrap ${p.daysLeft < 0 ? 'text-red-400' : 'text-amber-300'}`}
+                    >
+                      {relativeDayLabel(p.daysLeft)}
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -15,7 +15,8 @@ const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const CLOCK_TICK_MS = 30 * 1000;
 const SWIPE_THRESHOLD_PX = 50;
 const NIGHT_START_HOUR = 23;
-const NIGHT_END_HOUR = 7;
+const NIGHT_END_HOUR = 6;
+const WAKE_DURATION_MS = 5 * 60 * 1000;
 const LIGHT_START_HOUR = 7;
 const LIGHT_END_HOUR = 20;
 const THEME_STORAGE_KEY = 'tv-dashboard-theme';
@@ -248,6 +249,7 @@ function Dashboard({ now }: { now: Date }) {
   const { items: adHocItems, refetch: refetchAdHoc } = useShoppingItems();
   const [screen, setScreen] = useState<ScreenIndex>(0);
   const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
+  const [wakeUntil, setWakeUntil] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -300,6 +302,25 @@ function Dashboard({ now }: { now: Date }) {
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
+    if (isNight) setWakeUntil(Date.now() + WAKE_DURATION_MS);
+  }
+
+  if (isNight && now.getTime() >= wakeUntil) {
+    // Klok springt elke minuut naar een andere plek zodat geen pixel lang brandt.
+    const minuteIndex = now.getHours() * 60 + now.getMinutes();
+    return (
+      <div
+        className="relative h-screen w-screen cursor-pointer select-none overflow-hidden bg-black"
+        onClick={() => setWakeUntil(Date.now() + WAKE_DURATION_MS)}
+      >
+        <div
+          className="absolute text-3xl font-light tabular-nums text-neutral-700"
+          style={{ left: `${5 + ((minuteIndex * 37) % 75)}%`, top: `${5 + ((minuteIndex * 53) % 80)}%` }}
+        >
+          {now.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
+    );
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
@@ -317,7 +338,7 @@ function Dashboard({ now }: { now: Date }) {
       onTouchEnd={handleTouchEnd}
     >
       <div
-        className={`flex h-full flex-col transition-opacity duration-1000 ${isNight ? 'opacity-40' : 'opacity-100'}`}
+        className="flex h-full flex-col"
         style={{ transform: `translate(${shiftX}px, ${shiftY}px)` }}
       >
         <header className="flex items-end justify-between px-8 pt-6 pb-4">

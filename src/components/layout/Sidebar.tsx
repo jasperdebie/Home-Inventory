@@ -36,6 +36,11 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <div className="p-3 border-t border-gray-100">
+        <Link href="/tv-dashboard" className="text-xs text-gray-400 hover:text-gray-600">
+          Tv-dashboard
+        </Link>
+      </div>
     </aside>
   );
 }

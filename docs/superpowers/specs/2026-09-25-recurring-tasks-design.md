@@ -153,8 +153,9 @@ verandert, wordt `next_due` herberekend:
 
 ### Weer activeren
 Bij `archived` true → false wordt `next_due` herberekend met dezelfde regels als
-bij "Schema wijzigen", zodat een lang gestopte taak niet meteen als "te laat"
-verschijnt.
+bij "Schema wijzigen", en daarna begrensd op minstens `today`. Zo verschijnt een
+lang gestopte taak niet meteen als "te laat" (ook niet bij een interval, waar de
+laatste keer + N nog in het verleden kan liggen).
 
 ### Schema in gewone taal (`describeSchedule(task)`)
 Voorbeelden:
@@ -219,7 +220,7 @@ dat Postgres `DATE` als volledige tijdstempel in JSON belandt.
 | endpoint | body / query | doet |
 |---|---|---|
 | `GET /api/tasks` | `?archived=1` optioneel | actieve (standaard) of gearchiveerde taken, met `last_done` (laatste `done` event_date) |
-| `POST /api/tasks` | taakvelden + `today` | valideert, berekent eerste `next_due`, maakt aan |
+| `POST /api/tasks` | taakvelden | valideert, berekent eerste `next_due` (hangt enkel af van `start_date`), maakt aan |
 | `GET /api/tasks/[id]` | — | taak + historiek (nieuwste eerst) |
 | `PATCH /api/tasks/[id]` | gewijzigde velden, `today` | bewerken, uitstellen (`next_due`), archiveren (`archived`); herberekent `next_due` bij een schemawijziging |
 | `DELETE /api/tasks/[id]` | — | verwijdert taak (+ historiek via cascade) |

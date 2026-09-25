@@ -6,6 +6,9 @@ import { usePeople } from '@/lib/hooks/usePeople';
 import { useProducts } from '@/lib/hooks/useProducts';
 import { useShoppingList, type ShoppingGroup } from '@/lib/hooks/useShoppingList';
 import { useShoppingItems } from '@/lib/hooks/useShoppingItems';
+import { useTasks } from '@/lib/hooks/useTasks';
+import { useToast } from '@/components/ui/Toast';
+import { categoryDef, compareTasks, dueGroup, dueLabel, type Task } from '@/lib/tasks/shared';
 import { buildUpcoming, daysUntil, toDateKey, type UpcomingEntry } from '@/lib/people/shared';
 import { relativeDayLabel } from '@/components/people/UpcomingList';
 
@@ -182,6 +185,28 @@ function BringCard({ entry, t }: { entry: UpcomingEntry; t: Theme }) {
   );
 }
 
+function TaskCard({ task, today, busy, onDone, t }: { task: Task; today: string; busy: boolean; onDone: () => void; t: Theme }) {
+  const overdue = dueGroup(task.next_due, today) === 'overdue';
+  return (
+    <div className={`flex items-center gap-4 rounded-2xl border-l-4 px-5 py-4 ${overdue ? `border-red-500 ${t.cardPlain}` : t.card}`}>
+      <span className="text-3xl">{categoryDef(task.category).icon}</span>
+      <Link href={`/tasks/${task.id}`} className="min-w-0 flex-1">
+        <span className={`block truncate text-2xl font-semibold ${t.primary}`}>{task.title}</span>
+        <span className={`block text-lg font-medium ${overdue ? t.red : t.muted}`}>{dueLabel(task.next_due, today)}</span>
+      </Link>
+      <button
+        type="button"
+        onClick={onDone}
+        disabled={busy}
+        aria-label={`${task.title} gedaan`}
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal-600 text-3xl text-white hover:bg-teal-700 disabled:opacity-40"
+      >
+        ✓
+      </button>
+    </div>
+  );
+}
+
 function quantityLabel(needed: number, unit: string): string {
   if (unit === 'pcs') return `${needed} ${needed === 1 ? 'stuk' : 'stuks'} nodig`;
   return `${needed} ${unit} nodig`;
@@ -247,6 +272,9 @@ function Dashboard({ now }: { now: Date }) {
   const { products, refetch: refetchProducts } = useProducts();
   const { groups: shoppingGroups, lowPrioGroups, totalLowPrio, refetch: refetchShopping } = useShoppingList();
   const { items: adHocItems, refetch: refetchAdHoc } = useShoppingItems();
+  const { tasks, refetch: refetchTasks, completeTask } = useTasks();
+  const { toast } = useToast();
+  const [busyTaskIds, setBusyTaskIds] = useState<ReadonlySet<string>>(new Set());
   const [screen, setScreen] = useState<ScreenIndex>(0);
   const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
   const [wakeUntil, setWakeUntil] = useState(0);
@@ -258,9 +286,10 @@ function Dashboard({ now }: { now: Date }) {
       refetchProducts();
       refetchShopping();
       refetchAdHoc();
+      refetchTasks();
     }, REFRESH_INTERVAL_MS);
     return () => clearInterval(refresh);
-  }, [refetchPeople, refetchProducts, refetchShopping, refetchAdHoc]);
+  }, [refetchPeople, refetchProducts, refetchShopping, refetchAdHoc, refetchTasks]);
 
   const openAdHoc = adHocItems.filter((i) => !i.is_checked);
   const stillToBuy = shoppingGroups.reduce((n, g) => n + g.items.filter((i) => !i.isBought).length, 0);
@@ -272,6 +301,29 @@ function Dashboard({ now }: { now: Date }) {
     const [y, m, d] = todayKey.split('-').map(Number);
     return new Date(y, m - 1, d);
   }, [todayKey]);
+
+  const dueTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => {
+          const group = dueGroup(task.next_due, todayKey);
+          return group === 'overdue' || group === 'today';
+        })
+        .sort(compareTasks),
+    [tasks, todayKey],
+  );
+
+  async function markTaskDone(task: Task) {
+    setBusyTaskIds((prev) => new Set(prev).add(task.id));
+    const error = await completeTask(task.id, 'done');
+    setBusyTaskIds((prev) => {
+      const next = new Set(prev);
+      next.delete(task.id);
+      return next;
+    });
+    if (error) toast(error, 'error');
+    else toast(`✓ ${task.title}`);
+  }
 
   const upcoming = useMemo(() => buildUpcoming(people, today, UPCOMING_WINDOW_DAYS), [people, today]);
   const birthdays = upcoming.filter((e) => e.kind === 'birthday');
@@ -368,6 +420,25 @@ function Dashboard({ now }: { now: Date }) {
             style={{ transform: `translateX(-${(screen * 100) / 3}%)` }}
           >
             <section className="grid h-full w-1/3 shrink-0 grid-cols-1 content-start gap-8 overflow-y-auto px-8 pb-16 landscape:grid-cols-2">
+              {dueTasks.length > 0 && (
+                <div className="landscape:col-span-2">
+                  <SectionTitle icon="✅" title="Te doen" count={dueTasks.length} t={t} />
+                  <ul className="grid grid-cols-1 gap-3 landscape:grid-cols-2">
+                    {dueTasks.map((task) => (
+                      <li key={task.id}>
+                        <TaskCard
+                          task={task}
+                          today={todayKey}
+                          busy={busyTaskIds.has(task.id)}
+                          onDone={() => markTaskDone(task)}
+                          t={t}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div>
                 <SectionTitle icon="🎂" title="Verjaardagen" count={birthdays.length} t={t} />
                 {birthdays.length === 0 ? (

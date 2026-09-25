@@ -20,13 +20,23 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     if (task.archived) return NextResponse.json({ error: 'Deze taak is gestopt' }, { status: 400 });
 
     const nextDue = nextDueAfterEvent(task, kind, task.next_due, date);
-    await sql.begin(async (tx) => {
+    // Enkel toepassen als niemand de taak intussen afvinkte (twee toestellen tegelijk).
+    const applied = await sql.begin(async (tx) => {
+      const updated = await tx`
+        UPDATE tasks SET next_due = ${nextDue}
+        WHERE id = ${id} AND next_due = ${task.next_due} AND archived = FALSE
+        RETURNING id
+      `;
+      if (updated.length === 0) return false;
       await tx`
         INSERT INTO task_events (task_id, kind, event_date, due_date)
         VALUES (${id}, ${kind}, ${date}, ${task.next_due})
       `;
-      await tx`UPDATE tasks SET next_due = ${nextDue} WHERE id = ${id}`;
+      return true;
     });
+    if (!applied) {
+      return NextResponse.json({ error: 'Deze taak werd intussen al bijgewerkt' }, { status: 409 });
+    }
     return NextResponse.json(await findTask(id));
   } catch (error) {
     console.error('Complete task failed', error);

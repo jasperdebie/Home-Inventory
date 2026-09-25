@@ -23,8 +23,16 @@ export default function TasksPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [postponing, setPostponing] = useState<Task | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
+  const setBusy = (id: string, busy: boolean) =>
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      if (busy) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
   const today = todayKey();
 
   const groups = useMemo(() => {
@@ -36,18 +44,18 @@ export default function TasksPage() {
   }, [tasks, filter, today]);
 
   const complete = async (task: Task, kind: TaskEventKind) => {
-    setBusyId(task.id);
+    setBusy(task.id, true);
     const error = await completeTask(task.id, kind);
-    setBusyId(null);
+    setBusy(task.id, false);
     if (error) toast(error, 'error');
     else toast(kind === 'done' ? `✓ ${task.title}` : `⏭ ${task.title} overgeslagen`);
   };
 
   const reactivate = async (task: Task) => {
-    setBusyId(task.id);
+    setBusy(task.id, true);
     const error = await archived.updateTask(task.id, { archived: false });
     await refetch();
-    setBusyId(null);
+    setBusy(task.id, false);
     if (error) toast(error, 'error');
     else toast(`${task.title} is weer actief`);
   };
@@ -128,7 +136,7 @@ export default function TasksPage() {
                       key={t.id}
                       task={t}
                       today={today}
-                      busy={busyId === t.id}
+                      busy={busyIds.has(t.id)}
                       onDone={() => complete(t, 'done')}
                       onSkip={() => complete(t, 'skipped')}
                       onPostpone={() => setPostponing(t)}
@@ -162,7 +170,7 @@ export default function TasksPage() {
                       <Link href={`/tasks/${t.id}`} className="min-w-0 flex-1 truncate text-gray-500">
                         {t.title}
                       </Link>
-                      <Button size="sm" variant="secondary" disabled={busyId === t.id} onClick={() => reactivate(t)}>
+                      <Button size="sm" variant="secondary" disabled={busyIds.has(t.id)} onClick={() => reactivate(t)}>
                         Weer activeren
                       </Button>
                     </li>

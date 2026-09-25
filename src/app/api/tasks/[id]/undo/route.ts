@@ -13,19 +13,19 @@ export async function POST(_request: NextRequest, { params }: Ctx) {
     const task = await findTask(id);
     if (!task) return NextResponse.json({ error: 'Taak niet gevonden' }, { status: 404 });
 
-    const [last] = await sql`
-      SELECT id, due_date::text AS due_date
-      FROM task_events
-      WHERE task_id = ${id}
-      ORDER BY created_at DESC
-      LIMIT 1
-    `;
-    if (!last) return NextResponse.json({ error: 'Er is niets om ongedaan te maken' }, { status: 400 });
-
-    await sql.begin(async (tx) => {
-      await tx`DELETE FROM task_events WHERE id = ${last.id}`;
+    const restored = await sql.begin(async (tx) => {
+      const [last] = await tx`
+        DELETE FROM task_events
+        WHERE id = (
+          SELECT id FROM task_events WHERE task_id = ${id} ORDER BY created_at DESC LIMIT 1
+        )
+        RETURNING due_date::text AS due_date
+      `;
+      if (!last) return false;
       await tx`UPDATE tasks SET next_due = ${last.due_date} WHERE id = ${id}`;
+      return true;
     });
+    if (!restored) return NextResponse.json({ error: 'Er is niets om ongedaan te maken' }, { status: 400 });
     return NextResponse.json(await findTask(id));
   } catch (error) {
     console.error('Undo task event failed', error);

@@ -66,6 +66,16 @@ export default function LandingPage() {
               </p>
             </div>
           </Link>
+          <Link
+            href="/tasks"
+            className="group rounded-2xl border border-teal-200 bg-teal-50 p-8 min-h-48 flex flex-col justify-between transition-all hover:bg-teal-100 hover:border-teal-300"
+          >
+            <span className="text-4xl">🔁</span>
+            <div>
+              <h2 className="text-2xl font-semibold text-teal-900">Taken</h2>
+              <p className="text-sm text-teal-700 mt-2">Wat er dagelijks, wekelijks of maandelijks moet gebeuren.</p>
+            </div>
+          </Link>
         </div>
 
         <p className="text-center">

@@ -15,12 +15,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isFoodDiary = pathname === '/food-diary' || pathname.startsWith('/food-diary/');
   const isPeople = pathname === '/people' || pathname.startsWith('/people/');
   const isTvDashboard = pathname === '/tv-dashboard';
+  const isTasks = pathname === '/tasks' || pathname.startsWith('/tasks/');
 
   if (isLogin || isLanding) {
     return <>{children}</>;
   }
 
-  if (isBookLibrary || isCookbook || isFoodDiary || isPeople || isTvDashboard) {
+  if (isBookLibrary || isCookbook || isFoodDiary || isPeople || isTvDashboard || isTasks) {
     return <ToastProvider>{children}</ToastProvider>;
   }
 

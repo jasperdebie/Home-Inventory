@@ -56,6 +56,7 @@ export interface Person {
   id: string;
   name: string;
   group_id: string | null;
+  household_id: string | null;
   birthday: string | null; // YYYY-MM-DD
   birthday_has_year: boolean;
   notes: string | null;

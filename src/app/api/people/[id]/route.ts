@@ -15,6 +15,7 @@ export async function GET(
         p.id,
         p.name,
         p.group_id,
+        p.household_id,
         p.birthday::text AS birthday,
         p.birthday_has_year,
         p.notes,
@@ -29,7 +30,7 @@ export async function GET(
       return NextResponse.json({ error: 'Persoon niet gevonden' }, { status: 404 });
     }
 
-    const [reminders, giftIdeas] = await Promise.all([
+    const [reminders, giftIdeas, householdRows, housemates] = await Promise.all([
       sql`
         SELECT
           id, person_id, type, text, due_date::text AS due_date,
@@ -44,6 +45,12 @@ export async function GET(
         WHERE person_id = ${id}
         ORDER BY created_at ASC
       `,
+      person.household_id
+        ? sql`SELECT * FROM people_households WHERE id = ${person.household_id}`
+        : Promise.resolve([]),
+      person.household_id
+        ? sql`SELECT id, name FROM people WHERE household_id = ${person.household_id} AND id <> ${id} ORDER BY name ASC`
+        : Promise.resolve([]),
     ]);
 
     const { group_name, ...personData } = person;
@@ -53,6 +60,8 @@ export async function GET(
       group_name: group_name ?? null,
       reminders,
       giftIdeas,
+      household: householdRows[0] ?? null,
+      housemates,
     });
   } catch (error) {
     console.error('Person query failed', error);
@@ -85,6 +94,7 @@ export async function PATCH(
       SET
         name = ${'name' in body ? body.name.trim() : current.name},
         group_id = ${'group_id' in body ? body.group_id || null : current.group_id},
+        household_id = ${'household_id' in body ? body.household_id || null : current.household_id},
         notes = ${'notes' in body ? body.notes?.trim() || null : current.notes},
         birthday = ${'birthday' in body ? body.birthday || null : current.birthday},
         birthday_has_year = ${'birthday_has_year' in body ? Boolean(body.birthday_has_year) : current.birthday_has_year}
@@ -94,6 +104,10 @@ export async function PATCH(
 
     return NextResponse.json(row);
   } catch (error) {
+    const code = (error as { code?: string }).code;
+    if ('household_id' in body && (code === '23503' || code === '22P02')) {
+      return NextResponse.json({ error: 'Onbekend huishouden' }, { status: 400 });
+    }
     console.error('Update person failed', error);
     return NextResponse.json({ error: 'Failed to update person' }, { status: 500 });
   }

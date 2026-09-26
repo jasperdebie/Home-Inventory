@@ -19,7 +19,7 @@ const TODAY = new Date(2026, 6, 23); // 2026-07-23 (lokale tijd)
 
 function person(overrides: Partial<PersonSummary>): PersonSummary {
   return {
-    id: 'p', name: 'Naam', group_id: null, group_name: null,
+    id: 'p', name: 'Naam', group_id: null, household_id: null, group_name: null,
     birthday: null, birthday_has_year: true, notes: null,
     created_at: '2026-01-01T00:00:00Z',
     open_counts: { bring: 0, ask: 0, event: 0 },

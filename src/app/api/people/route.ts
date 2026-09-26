@@ -4,9 +4,10 @@ import type { PersonSummary, RawDatedItem, ReminderType } from '@/lib/people/sha
 
 export async function GET() {
   try {
-    const [groups, peopleRows, reminders] = await Promise.all([
+    const [groups, households, peopleRows, reminders] = await Promise.all([
       sql`SELECT * FROM people_groups ORDER BY name ASC`,
-      sql`SELECT id, name, group_id, birthday::text AS birthday, birthday_has_year, notes, created_at FROM people ORDER BY name ASC`,
+      sql`SELECT * FROM people_households ORDER BY name ASC`,
+      sql`SELECT id, name, group_id, household_id, birthday::text AS birthday, birthday_has_year, notes, created_at FROM people ORDER BY name ASC`,
       sql`SELECT id, person_id, type, text, due_date::text AS due_date, recurs_annually, done, done_at, sort_order, created_at FROM people_reminders WHERE done = FALSE`,
     ]);
 
@@ -52,6 +53,7 @@ export async function GET() {
         name: p.name,
         group_id: p.group_id,
         group_name: p.group_id ? groupNameById.get(p.group_id) ?? null : null,
+        household_id: p.household_id ?? null,
         birthday: (p.birthday as string | null) ?? null,
         birthday_has_year: p.birthday_has_year,
         notes: p.notes,
@@ -61,7 +63,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ groups, people });
+    return NextResponse.json({ groups, households, people });
   } catch (error) {
     console.error('People query failed', error);
     return NextResponse.json({ error: 'Failed to load people' }, { status: 500 });

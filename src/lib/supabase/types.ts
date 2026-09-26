@@ -159,6 +159,7 @@ export type PersonRow = {
   id: string;
   name: string;
   group_id: string | null;
+  household_id: string | null;
   birthday: string | null;
   birthday_has_year: boolean;
   notes: string | null;

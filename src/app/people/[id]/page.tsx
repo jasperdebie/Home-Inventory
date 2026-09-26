@@ -14,15 +14,16 @@ import { ReminderSection } from '@/components/people/ReminderSection';
 import { ReminderFormDialog } from '@/components/people/ReminderFormDialog';
 import { GiftIdeaSection } from '@/components/people/GiftIdeaSection';
 import { HistorySection } from '@/components/people/HistorySection';
+import { HouseholdSection } from '@/components/people/HouseholdSection';
 import { currentAge } from '@/lib/people/shared';
 
 export default function PersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const { toast } = useToast();
-  const { groups } = usePeople();
+  const { groups, households, createHousehold, updateHousehold, deleteHousehold } = usePeople();
   const {
-    loading, person, groupName, reminders, giftIdeas,
+    loading, person, groupName, reminders, giftIdeas, household, housemates, refetch,
     updatePerson, deletePerson,
     addReminder, updateReminder, deleteReminder,
     addGiftIdea, updateGiftIdea, deleteGiftIdea,
@@ -94,6 +95,32 @@ export default function PersonDetailPage({ params }: { params: Promise<{ id: str
               <p className="mt-1 text-xs text-gray-400">Huidige groep: {groupName}</p>
             )}
           </div>
+
+          <HouseholdSection
+            personName={person.name}
+            household={household}
+            housemates={housemates}
+            households={households}
+            onSelect={(householdId) => updatePerson({ household_id: householdId })}
+            onCreate={async (input) => {
+              const { household: created, error } = await createHousehold(input);
+              if (error || !created) return error ?? 'Opslaan mislukt';
+              await updatePerson({ household_id: created.id });
+              return null;
+            }}
+            onUpdate={async (input) => {
+              if (!household) return 'Geen huishouden gekozen';
+              const error = await updateHousehold(household.id, input);
+              await refetch();
+              return error;
+            }}
+            onDelete={async () => {
+              if (!household) return null;
+              const error = await deleteHousehold(household.id);
+              await refetch();
+              return error;
+            }}
+          />
 
           <div>
             <Input

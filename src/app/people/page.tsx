@@ -12,9 +12,10 @@ import { PersonFormDialog } from '@/components/people/PersonFormDialog';
 import { GroupManagerDialog } from '@/components/people/GroupManagerDialog';
 
 export default function PeoplePage() {
-  const { loading, people, groups, createPerson, createGroup, renameGroup, deleteGroup } = usePeople();
+  const { loading, people, groups, households, createPerson, createGroup, renameGroup, deleteGroup } = usePeople();
   const [sort, setSort] = useState<SortMode>('name');
   const [groupFilter, setGroupFilter] = useState<string>('');
+  const [householdFilter, setHouseholdFilter] = useState<string>('');
   const [personDialog, setPersonDialog] = useState(false);
   const [groupDialog, setGroupDialog] = useState(false);
 
@@ -22,12 +23,14 @@ export default function PeoplePage() {
   const upcoming = useMemo(() => buildUpcoming(people, today), [people, today]);
 
   const visible = useMemo(() => {
-    const filtered = groupFilter ? people.filter((p) => p.group_id === groupFilter) : people;
+    const filtered = people.filter(
+      (p) => (!groupFilter || p.group_id === groupFilter) && (!householdFilter || p.household_id === householdFilter),
+    );
     const sorted = [...filtered];
     if (sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
     else sorted.sort((a, b) => comparePeopleByDate(a, b, today));
     return sorted;
-  }, [people, groupFilter, sort, today]);
+  }, [people, groupFilter, householdFilter, sort, today]);
 
   if (loading) {
     return (
@@ -62,7 +65,7 @@ export default function PeoplePage() {
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortMode)}
@@ -83,6 +86,21 @@ export default function PeoplePage() {
                   </option>
                 ))}
               </select>
+              {households.length > 0 && (
+                <select
+                  value={householdFilter}
+                  onChange={(e) => setHouseholdFilter(e.target.value)}
+                  aria-label="Filter op huishouden"
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900"
+                >
+                  <option value="">Alle huishoudens</option>
+                  {households.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <Button size="sm" variant="secondary" onClick={() => setGroupDialog(true)}>
               Groepen
@@ -90,7 +108,9 @@ export default function PeoplePage() {
           </div>
 
           {visible.length === 0 ? (
-            <p className="text-sm text-gray-500 py-6 text-center">Nog geen personen. Voeg er een toe.</p>
+            <p className="text-sm text-gray-500 py-6 text-center">
+              {people.length === 0 ? 'Nog geen personen. Voeg er een toe.' : 'Geen personen voor deze filter.'}
+            </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {visible.map((p) => (

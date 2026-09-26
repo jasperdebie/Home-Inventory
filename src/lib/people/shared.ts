@@ -217,3 +217,66 @@ export function buildHistory(reminders: Reminder[], giftIdeas: GiftIdea[]): Hist
   out.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return out;
 }
+
+// ─── Huishoudens ─────────────────────────────────────────────
+
+export interface HouseholdAddress {
+  street: string | null;
+  house_number: string | null;
+  postal_code: string | null;
+  city: string | null;
+}
+
+export interface Household extends HouseholdAddress {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface HouseholdInput extends HouseholdAddress {
+  name: string;
+}
+
+export interface Housemate {
+  id: string;
+  name: string;
+}
+
+function cleanPart(value: string | null): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/** "Kerkstraat 12, 9000 Gent"; lege delen vallen weg. */
+export function formatAddress(a: HouseholdAddress): string {
+  const line1 = [cleanPart(a.street), cleanPart(a.house_number)].filter(Boolean).join(' ');
+  const line2 = [cleanPart(a.postal_code), cleanPart(a.city)].filter(Boolean).join(' ');
+  return [line1, line2].filter(Boolean).join(', ');
+}
+
+export function hasAddress(a: HouseholdAddress): boolean {
+  return formatAddress(a) !== '';
+}
+
+export function mapsRouteUrl(a: HouseholdAddress): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${formatAddress(a)}, België`)}`;
+}
+
+export function parseHouseholdInput(
+  body: unknown,
+): { ok: true; value: HouseholdInput } | { ok: false; error: string } {
+  if (typeof body !== 'object' || body === null) return { ok: false, error: 'Ongeldige invoer' };
+  const b = body as Record<string, unknown>;
+  const name = typeof b.name === 'string' ? b.name.trim() : '';
+  if (!name) return { ok: false, error: 'Naam is verplicht' };
+  const field = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  return {
+    ok: true,
+    value: {
+      name,
+      street: field(b.street),
+      house_number: field(b.house_number),
+      postal_code: field(b.postal_code),
+      city: field(b.city),
+    },
+  };
+}

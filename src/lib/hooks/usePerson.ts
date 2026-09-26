@@ -48,13 +48,22 @@ export function usePerson(id: string) {
   }, [refetch]);
 
   const updatePerson = useCallback(
-    async (patch: Partial<Pick<Person, 'name' | 'group_id' | 'household_id' | 'birthday' | 'birthday_has_year' | 'notes'>>) => {
-      const res = await fetch(`/api/people/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      });
-      if (res.ok) await refetch();
+    async (
+      patch: Partial<Pick<Person, 'name' | 'group_id' | 'household_id' | 'birthday' | 'birthday_has_year' | 'notes'>>,
+    ): Promise<string | null> => {
+      try {
+        const res = await fetch(`/api/people/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        });
+        const data = res.ok ? null : await res.json().catch(() => null);
+        await refetch();
+        if (res.ok) return null;
+        return data && typeof data.error === 'string' ? data.error : 'Opslaan mislukt';
+      } catch {
+        return 'Geen verbinding met de server';
+      }
     },
     [id, refetch],
   );

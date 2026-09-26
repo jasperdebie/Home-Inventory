@@ -101,11 +101,19 @@ export default function PersonDetailPage({ params }: { params: Promise<{ id: str
             household={household}
             housemates={housemates}
             households={households}
-            onSelect={(householdId) => updatePerson({ household_id: householdId })}
+            onSelect={async (householdId) => {
+              const error = await updatePerson({ household_id: householdId });
+              if (error) toast(error, 'error');
+            }}
             onCreate={async (input) => {
               const { household: created, error } = await createHousehold(input);
               if (error || !created) return error ?? 'Opslaan mislukt';
-              await updatePerson({ household_id: created.id });
+              const linkError = await updatePerson({ household_id: created.id });
+              if (linkError) {
+                // Geen leeg huishouden achterlaten als koppelen mislukt.
+                await deleteHousehold(created.id);
+                return linkError;
+              }
               return null;
             }}
             onUpdate={async (input) => {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatAddress, hasAddress, mapsRouteUrl, parseHouseholdInput, type HouseholdAddress } from './shared.ts';
+import { formatAddress, hasAddress, mapsRouteUrl, missingInfo, parseHouseholdInput, type HouseholdAddress } from './shared.ts';
 
 function addr(overrides: Partial<HouseholdAddress>): HouseholdAddress {
   return { street: null, house_number: null, postal_code: null, city: null, ...overrides };
@@ -45,4 +45,28 @@ test('parseHouseholdInput trimt en zet lege velden op null', () => {
 test('parseHouseholdInput weigert een lege naam of ongeldige invoer', () => {
   assert.deepEqual(parseHouseholdInput({ name: '  ' }), { ok: false, error: 'Naam is verplicht' });
   assert.deepEqual(parseHouseholdInput(null), { ok: false, error: 'Ongeldige invoer' });
+});
+
+test('missingInfo: alles ingevuld geeft niets', () => {
+  const h = addr({ street: 'Kerkstraat', city: 'Gent' });
+  assert.deepEqual(missingInfo({ birthday: '1990-05-01', household_id: 'h1' }, h), []);
+});
+
+test('missingInfo: geen verjaardag en geen huishouden', () => {
+  assert.deepEqual(
+    missingInfo({ birthday: null, household_id: null }, null).map((m) => m.key),
+    ['birthday', 'household'],
+  );
+});
+
+test('missingInfo: huishouden zonder adres', () => {
+  const r = missingInfo({ birthday: '1990-05-01', household_id: 'h1' }, addr({}));
+  assert.deepEqual(r, [{ key: 'address', icon: '📍', label: 'Geen adres' }]);
+});
+
+test('missingInfo: labels en iconen', () => {
+  assert.deepEqual(missingInfo({ birthday: null, household_id: null }, null), [
+    { key: 'birthday', icon: '🎂', label: 'Geen verjaardag' },
+    { key: 'household', icon: '🏠', label: 'Geen huishouden' },
+  ]);
 });

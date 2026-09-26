@@ -281,3 +281,21 @@ export function parseHouseholdInput(
     },
   };
 }
+
+export interface MissingInfo {
+  key: 'birthday' | 'household' | 'address';
+  icon: string;
+  label: string;
+}
+
+/** Wat er nog ontbreekt bij een persoon, voor de grijze "?"-labels op de kaart. */
+export function missingInfo(
+  person: Pick<Person, 'birthday' | 'household_id'>,
+  household: HouseholdAddress | null,
+): MissingInfo[] {
+  const out: MissingInfo[] = [];
+  if (!person.birthday) out.push({ key: 'birthday', icon: '🎂', label: 'Geen verjaardag' });
+  if (!person.household_id) out.push({ key: 'household', icon: '🏠', label: 'Geen huishouden' });
+  else if (household && !hasAddress(household)) out.push({ key: 'address', icon: '📍', label: 'Geen adres' });
+  return out;
+}

@@ -114,7 +114,12 @@ export default function PeoplePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {visible.map((p) => (
-                <PersonCard key={p.id} person={p} today={today} />
+                <PersonCard
+                  key={p.id}
+                  person={p}
+                  household={households.find((h) => h.id === p.household_id) ?? null}
+                  today={today}
+                />
               ))}
             </div>
           )}

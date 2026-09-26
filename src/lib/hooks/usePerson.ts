@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { Person, Reminder, GiftIdea, ReminderType } from '@/lib/people/shared';
+import type { Person, Reminder, GiftIdea, ReminderType, Household, Housemate } from '@/lib/people/shared';
 
 interface ReminderInput {
   type: ReminderType;
@@ -15,18 +15,28 @@ export function usePerson(id: string) {
   const [groupName, setGroupName] = useState<string | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [giftIdeas, setGiftIdeas] = useState<GiftIdea[]>([]);
+  const [household, setHousehold] = useState<Household | null>(null);
+  const [housemates, setHousemates] = useState<Housemate[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refetch = useCallback(async () => {
     try {
       const res = await fetch(`/api/people/${id}`);
       if (!res.ok) return;
-      const data: { person: Person; group_name: string | null; reminders: Reminder[]; giftIdeas: GiftIdea[] } =
-        await res.json();
+      const data: {
+        person: Person;
+        group_name: string | null;
+        reminders: Reminder[];
+        giftIdeas: GiftIdea[];
+        household: Household | null;
+        housemates: Housemate[];
+      } = await res.json();
       setPerson(data.person);
       setGroupName(data.group_name);
       setReminders(data.reminders);
       setGiftIdeas(data.giftIdeas);
+      setHousehold(data.household);
+      setHousemates(data.housemates);
     } catch {
       /* netwerkfout */
     }
@@ -38,7 +48,7 @@ export function usePerson(id: string) {
   }, [refetch]);
 
   const updatePerson = useCallback(
-    async (patch: Partial<Pick<Person, 'name' | 'group_id' | 'birthday' | 'birthday_has_year' | 'notes'>>) => {
+    async (patch: Partial<Pick<Person, 'name' | 'group_id' | 'household_id' | 'birthday' | 'birthday_has_year' | 'notes'>>) => {
       const res = await fetch(`/api/people/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -119,7 +129,7 @@ export function usePerson(id: string) {
   );
 
   return {
-    loading, person, groupName, reminders, giftIdeas, refetch,
+    loading, person, groupName, reminders, giftIdeas, household, housemates, refetch,
     updatePerson, deletePerson,
     addReminder, updateReminder, deleteReminder,
     addGiftIdea, updateGiftIdea, deleteGiftIdea,
